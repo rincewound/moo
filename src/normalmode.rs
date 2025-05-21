@@ -4,7 +4,11 @@ use ratatui::{
     widgets::Block,
 };
 
-use crate::{app, mode::EditorMode, modeutil::render_mode_header};
+use crate::{
+    app,
+    mode::EditorMode,
+    modeutil::{render_mode_header, rotate_buffer},
+};
 
 #[derive(Default)]
 pub struct NormalMode {}
@@ -91,11 +95,6 @@ impl EditorMode for NormalMode {
         self.render_logo(frame, layout[1]);
         self.render_menu(frame, layout[2]);
     }
-}
-
-fn rotate_buffer(app_state: &mut app::ApplicationState, direction: i32) {
-    let next_buffer_id = app_state.current_buffer as i32 + direction;
-    app_state.current_buffer = (next_buffer_id % app_state.buffers.len() as i32) as usize;
 }
 
 fn rename_buffer(app_state: &mut app::ApplicationState) {

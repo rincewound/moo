@@ -6,7 +6,10 @@ use ratatui::{
     text::Line,
 };
 
-use crate::{mode::EditorMode, modeutil::render_mode_header};
+use crate::{
+    mode::EditorMode,
+    modeutil::{render_mode_header, rotate_buffer},
+};
 
 #[derive(Default)]
 pub struct InsertMode;
@@ -24,6 +27,12 @@ impl EditorMode for InsertMode {
         // Insert mode will just append letters to the current line:
         let buffer = &mut app_state.buffers[app_state.current_buffer];
         if key_event.modifiers.contains(KeyModifiers::CONTROL) {
+            match key_event.code {
+                KeyCode::Left => rotate_buffer(app_state, -1),
+                KeyCode::Right => rotate_buffer(app_state, 1),
+                _ => (),
+            }
+
             return;
         }
         match key_event.code {

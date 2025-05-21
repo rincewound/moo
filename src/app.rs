@@ -68,15 +68,6 @@ impl App {
     fn draw(&self, frame: &mut Frame) {
         self.with_active_mode(|mode, app_state| {
             mode.render(frame, app_state);
-
-            // draw current mode name on top:
-            let output_string = format!("{}", mode.mode_name());
-            let len = output_string.len() as u16;
-            frame.render_widget(
-                ratatui::widgets::Paragraph::new(output_string)
-                    .alignment(ratatui::layout::Alignment::Right),
-                ratatui::layout::Rect::new(frame.area().width - len, 0, len, 1),
-            );
         });
     }
 

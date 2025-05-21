@@ -1,4 +1,9 @@
-use ratatui::layout::{Constraint, Direction, Layout};
+use ratatui::{
+    layout::{Constraint, Direction, Layout},
+    widgets::Block,
+};
+
+use crate::app::ApplicationState;
 
 pub fn render_mode_header(
     frame: &mut ratatui::Frame,
@@ -18,11 +23,13 @@ pub fn render_mode_header(
     // and show their name and modified flag. If there are more buffers, add
     // an ellipsis, if fewer, just show as many as available
 
-    let num_to_skip = if app_state.buffers.len() > 4 {
+    const MAX_BUFFERS_TO_SHOW: usize = 6;
+
+    let num_to_skip = if app_state.buffers.len() > MAX_BUFFERS_TO_SHOW {
         // if more than 4 buffers, make sure to always display
         // at least 4 buffers.
-        if app_state.current_buffer > app_state.buffers.len() - 4 {
-            app_state.buffers.len() - 4
+        if app_state.current_buffer > app_state.buffers.len() - MAX_BUFFERS_TO_SHOW {
+            app_state.buffers.len() - MAX_BUFFERS_TO_SHOW
         } else {
             app_state.current_buffer
         }
@@ -34,7 +41,7 @@ pub fn render_mode_header(
         .buffers
         .iter()
         .skip(num_to_skip)
-        .take(4)
+        .take(MAX_BUFFERS_TO_SHOW)
         .map(|buffer| {
             let output_string = format!(
                 "{}{}|",
@@ -65,7 +72,7 @@ pub fn render_mode_header(
     if buffer_names.len() > 4 {
         frame.render_widget(
             ratatui::widgets::Paragraph::new("...").alignment(ratatui::layout::Alignment::Left),
-            ratatui::layout::Rect::new(pos, 4, 3, 1),
+            ratatui::layout::Rect::new(pos, 1, 3, 1),
         );
     }
 
@@ -75,6 +82,18 @@ pub fn render_mode_header(
     frame.render_widget(
         ratatui::widgets::Paragraph::new(output_string)
             .alignment(ratatui::layout::Alignment::Right),
-        ratatui::layout::Rect::new(dest.width - len, 0, len, 1),
+        ratatui::layout::Rect::new(dest.width - (len + 1), 1, len, 1),
     );
+
+    frame.render_widget(
+        ratatui::widgets::Paragraph::new("")
+            .alignment(ratatui::layout::Alignment::Right)
+            .block(Block::bordered()),
+        dest,
+    );
+}
+
+pub fn rotate_buffer(app_state: &mut ApplicationState, direction: i32) {
+    let next_buffer_id = app_state.current_buffer as i32 + direction;
+    app_state.current_buffer = (next_buffer_id % app_state.buffers.len() as i32) as usize;
 }
