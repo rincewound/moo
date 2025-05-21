@@ -10,13 +10,6 @@ use crate::{
     normalmode::NormalMode,
 };
 
-// #[derive(Default)]
-// pub struct Modifier {
-//     pub shift: bool,
-//     pub ctrl: bool,
-//     pub alt: bool,
-// }
-
 #[derive(Default)]
 pub struct BufferEntry {
     pub name: String,
@@ -25,6 +18,9 @@ pub struct BufferEntry {
     pub cursor_char: usize,
     pub modified: bool,
     pub scroll_offset: usize,
+
+    pub selection_start: Option<(usize, usize)>, // line + char
+    pub selection_end: Option<(usize, usize)>,   // line + char
 }
 
 #[derive(Default)]
@@ -46,12 +42,12 @@ pub struct App {
 
 impl App {
     pub fn new() -> App {
-        let mut app = App {
+        let app = App {
             ..Default::default()
         };
 
-        app.app_state.buffers.push(BufferEntry::default());
-        app.app_state.buffers[0].name = "untitled".to_string();
+        // app.app_state.buffers.push(BufferEntry::default());
+        // app.app_state.buffers[0].name = "untitled".to_string();
 
         app
     }

@@ -39,7 +39,7 @@ impl EditorMode for InsertMode {
             KeyCode::Char(c) => {
                 let current_line = buffer.buffer.line_at_mut(buffer.cursor_line);
                 if let Some(line) = current_line {
-                    line.insert(buffer.cursor_char, c);
+                    line.insert_str(buffer.cursor_char, c.to_string().as_str());
                     buffer.cursor_char += 1;
                 }
                 buffer.modified = true;

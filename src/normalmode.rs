@@ -1,3 +1,5 @@
+use std::io::Write;
+
 use crossterm::event::{KeyCode, KeyModifiers};
 use ratatui::{
     layout::{Constraint, Flex, Layout, Rect},
@@ -101,6 +103,9 @@ impl NormalMode {
     }
 
     fn rename_buffer(&mut self, _app_state: &app::ApplicationState) {
+        if _app_state.buffers.is_empty() {
+            return;
+        }
         self.active_popup = ActivePopup::RenameBuffer;
     }
 
@@ -140,6 +145,7 @@ impl NormalMode {
                 'n' => new_buffer(app_state),
                 'c' => close_buffer(app_state),
                 'a' => self.rename_buffer(app_state),
+                'w' => write_buffer(app_state),
                 _ => (),
             },
             KeyCode::Left => rotate_buffer(app_state, -1),
@@ -148,6 +154,16 @@ impl NormalMode {
             _ => {}
         }
     }
+}
+
+fn write_buffer(app_state: &mut app::ApplicationState) {
+    let buffer = &mut app_state.buffers[app_state.current_buffer];
+    buffer.modified = false;
+
+    // persists buffer as it is to file
+    let mut file = std::fs::File::create(&buffer.name).unwrap();
+    file.write_all(buffer.buffer.lines.join("\n").as_bytes())
+        .unwrap();
 }
 
 impl EditorMode for NormalMode {
