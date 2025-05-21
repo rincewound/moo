@@ -59,10 +59,6 @@ impl EditorMode for NormalMode {
         key_event: crossterm::event::KeyEvent,
         app_state: &mut crate::app::ApplicationState,
     ) {
-        // N: New Buffer
-        // C: Close Buffer
-        // A: Name Buffer
-
         if key_event.modifiers.contains(KeyModifiers::CONTROL) {
             return;
         }

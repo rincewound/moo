@@ -4,10 +4,9 @@ use ratatui::{
     layout::{Constraint, Layout},
     style::Stylize,
     text::Line,
-    widgets,
 };
 
-use crate::mode::EditorMode;
+use crate::{mode::EditorMode, modeutil::render_mode_header};
 
 #[derive(Default)]
 pub struct InsertMode;
@@ -99,14 +98,7 @@ impl EditorMode for InsertMode {
         let buffer = &app_state.buffers[app_state.current_buffer];
 
         // show buffer name + modified flag:
-        let output_string = format!("{}{}", buffer.name, if buffer.modified { "●" } else { "" });
-
-        let header_block = widgets::Block::new().borders(widgets::Borders::all());
-
-        frame.render_widget(
-            widgets::Paragraph::new(output_string).block(header_block),
-            layout[0],
-        );
+        render_mode_header(frame, layout[0], self.mode_name(), app_state);
 
         for (id, line) in buffer
             .buffer

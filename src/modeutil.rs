@@ -18,21 +18,36 @@ pub fn render_mode_header(
     // and show their name and modified flag. If there are more buffers, add
     // an ellipsis, if fewer, just show as many as available
 
+    let num_to_skip = if app_state.buffers.len() > 4 {
+        // if more than 4 buffers, make sure to always display
+        // at least 4 buffers.
+        if app_state.current_buffer > app_state.buffers.len() - 4 {
+            app_state.buffers.len() - 4
+        } else {
+            app_state.current_buffer
+        }
+    } else {
+        0
+    };
+
     let buffer_names: Vec<String> = app_state
         .buffers
         .iter()
-        .skip(app_state.current_buffer)
+        .skip(num_to_skip)
         .take(4)
         .map(|buffer| {
-            let output_string =
-                format!("{}{}|", buffer.name, if buffer.modified { "●" } else { "" });
+            let output_string = format!(
+                "{}{}|",
+                if buffer.modified { "● " } else { "" },
+                buffer.name
+            );
             output_string
         })
         .collect();
 
     let mut pos = 1;
     for (id, buffer_name) in buffer_names.iter().enumerate() {
-        let len = buffer_name.len() as u16;
+        let len = buffer_name.chars().count() as u16;
         let mut the_widget = ratatui::widgets::Paragraph::new(buffer_name.clone())
             .alignment(ratatui::layout::Alignment::Left);
         if id == app_state.current_buffer {
