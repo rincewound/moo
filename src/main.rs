@@ -1,14 +1,12 @@
 use std::io;
 
 use app::App;
-// use color_eyre::Result;
-use crossterm::event::{self, Event};
-use ratatui::{DefaultTerminal, Frame};
 
 mod app;
 mod buffer;
 mod insertmode;
 mod mode;
+mod modeutil;
 mod normalmode;
 
 fn main() -> io::Result<()> {
