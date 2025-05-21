@@ -98,7 +98,11 @@ impl App {
                 if key_event.modifiers.contains(event::KeyModifiers::CONTROL) {
                     // change modes
                     match key_event.code {
-                        KeyCode::Char('e') => self.current_mode = Mode::Insert,
+                        KeyCode::Char('e') => {
+                            if self.app_state.buffers.len() > 0 {
+                                self.current_mode = Mode::Insert
+                            }
+                        }
                         KeyCode::Char('a') => self.current_mode = Mode::Navigate,
                         KeyCode::Char('s') => self.current_mode = Mode::Select,
                         KeyCode::Char('n') => self.current_mode = Mode::Normal,

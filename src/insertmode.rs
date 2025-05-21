@@ -20,7 +20,7 @@ impl EditorMode for InsertMode {
     }
 
     fn handle_key_event(
-        &self,
+        &mut self,
         key_event: crossterm::event::KeyEvent,
         app_state: &mut crate::app::ApplicationState,
     ) {
@@ -167,7 +167,7 @@ mod tests {
     #[test]
     pub fn inject_char_modifies_buffer() {
         let mut app_state = make_default_app_state();
-        let insertmode = InsertMode::default();
+        let mut insertmode = InsertMode::default();
         insertmode.handle_key_event(
             crossterm::event::KeyEvent::new(KeyCode::Char('a'), KeyModifiers::NONE),
             &mut app_state,
@@ -181,7 +181,7 @@ mod tests {
     #[test]
     pub fn inject_backspace_modifies_buffer() {
         let mut app_state = make_default_app_state();
-        let insertmode = InsertMode::default();
+        let mut insertmode = InsertMode::default();
 
         app_state.buffers[0]
             .buffer
@@ -198,7 +198,7 @@ mod tests {
     #[test]
     pub fn inject_enter_modifies_buffer() {
         let mut app_state = make_default_app_state();
-        let insertmode = InsertMode::default();
+        let mut insertmode = InsertMode::default();
 
         app_state.buffers[0].buffer.lines.push("abc".to_string());
         app_state.buffers[0].cursor_line = 1;

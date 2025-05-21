@@ -14,6 +14,6 @@ pub enum Mode {
 
 pub trait EditorMode {
     fn mode_name(&self) -> &'static str;
-    fn handle_key_event(&self, key_event: KeyEvent, app_state: &mut ApplicationState);
+    fn handle_key_event(&mut self, key_event: KeyEvent, app_state: &mut ApplicationState);
     fn render(&self, frame: &mut Frame, app_state: &ApplicationState);
 }
