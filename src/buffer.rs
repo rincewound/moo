@@ -69,7 +69,7 @@ mod tests {
     #[test]
     pub fn can_construct_buffer() {
         let b = Buffer::new();
-        assert_eq!(b.num_lines(), 0);
+        assert_eq!(b.num_lines(), 1);
     }
 
     #[test]

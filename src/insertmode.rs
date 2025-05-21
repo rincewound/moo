@@ -1,7 +1,7 @@
 // use color_eyre::owo_colors::OwoColorize;
 use crossterm::event::{KeyCode, KeyModifiers};
 use ratatui::{
-    layout::{Constraint, Layout, Rect},
+    layout::{Constraint, Layout},
     style::Stylize,
     text::Line,
     widgets,
@@ -43,11 +43,14 @@ impl EditorMode for InsertMode {
                         line.remove(buffer.cursor_char - 1);
                         buffer.cursor_char -= 1;
                     } else {
-                        if buffer.buffer.num_lines() > 1 {
+                        if buffer.buffer.num_lines() >= 1 {
                             buffer.buffer.remove_line_at(buffer.cursor_line);
-                            buffer.cursor_line -= 1;
-                            buffer.cursor_char =
-                                buffer.buffer.line_at(buffer.cursor_line).unwrap().len();
+                            buffer.cursor_line = buffer.cursor_line.saturating_sub(1);
+                            if let Some(line) = buffer.buffer.line_at(buffer.cursor_line) {
+                                buffer.cursor_char = line.len();
+                            } else {
+                                buffer.cursor_line = 0;
+                            }
                         }
                     }
                 }
@@ -145,5 +148,68 @@ impl EditorMode for InsertMode {
                 );
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::app::BufferEntry;
+
+    use super::*;
+
+    fn make_default_app_state() -> crate::app::ApplicationState {
+        let mut app_state = crate::app::ApplicationState::default();
+        app_state.buffers.push(BufferEntry::default());
+        app_state
+    }
+
+    #[test]
+    pub fn inject_char_modifies_buffer() {
+        let mut app_state = make_default_app_state();
+        let insertmode = InsertMode::default();
+        insertmode.handle_key_event(
+            crossterm::event::KeyEvent::new(KeyCode::Char('a'), KeyModifiers::NONE),
+            &mut app_state,
+        );
+
+        assert_eq!(
+            app_state.buffers[0].buffer.line_at(0),
+            Some(&"a".to_string())
+        );
+    }
+    #[test]
+    pub fn inject_backspace_modifies_buffer() {
+        let mut app_state = make_default_app_state();
+        let insertmode = InsertMode::default();
+
+        app_state.buffers[0]
+            .buffer
+            .line_at_mut(0)
+            .unwrap()
+            .push('a');
+        insertmode.handle_key_event(
+            crossterm::event::KeyEvent::new(KeyCode::Backspace, KeyModifiers::NONE),
+            &mut app_state,
+        );
+
+        assert_eq!(app_state.buffers[0].buffer.line_at(0), None);
+    }
+    #[test]
+    pub fn inject_enter_modifies_buffer() {
+        let mut app_state = make_default_app_state();
+        let insertmode = InsertMode::default();
+
+        app_state.buffers[0].buffer.lines.push("abc".to_string());
+        app_state.buffers[0].cursor_line = 1;
+        app_state.buffers[0].cursor_char = 2;
+        insertmode.handle_key_event(
+            crossterm::event::KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE),
+            &mut app_state,
+        );
+
+        assert_eq!(
+            app_state.buffers[0].buffer.line_at(2),
+            Some(&"c".to_string())
+        );
     }
 }
