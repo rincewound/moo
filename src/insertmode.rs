@@ -1,6 +1,11 @@
 // use color_eyre::owo_colors::OwoColorize;
 use crossterm::event::{KeyCode, KeyModifiers};
-use ratatui::{style::Stylize, text::Line};
+use ratatui::{
+    layout::{Constraint, Layout, Rect},
+    style::Stylize,
+    text::Line,
+    widgets,
+};
 
 use crate::mode::EditorMode;
 
@@ -29,6 +34,7 @@ impl EditorMode for InsertMode {
                     line.insert(buffer.cursor_char, c);
                     buffer.cursor_char += 1;
                 }
+                buffer.modified = true;
             }
             KeyCode::Backspace => {
                 let current_line = buffer.buffer.line_at_mut(buffer.cursor_line);
@@ -45,6 +51,7 @@ impl EditorMode for InsertMode {
                         }
                     }
                 }
+                buffer.modified = true;
             }
             KeyCode::Enter => {
                 buffer
@@ -81,8 +88,22 @@ impl EditorMode for InsertMode {
 
     fn render(&self, frame: &mut ratatui::Frame, app_state: &crate::app::ApplicationState) {
         // ToDo: This should be generalized a bit for all modes!
+        let layout = Layout::default()
+            .direction(ratatui::layout::Direction::Vertical)
+            .constraints([Constraint::Length(3), Constraint::Min(1)])
+            .split(frame.area());
 
         let buffer = &app_state.buffers[app_state.current_buffer];
+
+        // show buffer name + modified flag:
+        let output_string = format!("{}{}", buffer.name, if buffer.modified { "●" } else { "" });
+
+        let header_block = widgets::Block::new().borders(widgets::Borders::all());
+
+        frame.render_widget(
+            widgets::Paragraph::new(output_string).block(header_block),
+            layout[0],
+        );
 
         for (id, line) in buffer
             .buffer
@@ -95,7 +116,7 @@ impl EditorMode for InsertMode {
             frame.render_widget(
                 ratatui::widgets::Paragraph::new(line.clone())
                     .alignment(ratatui::layout::Alignment::Left),
-                ratatui::layout::Rect::new(0, id as u16, len, 1),
+                ratatui::layout::Rect::new(0, 3 + id as u16, len, 1),
             );
 
             // render cursor:
@@ -105,9 +126,9 @@ impl EditorMode for InsertMode {
                 let char = line.chars().nth(buffer.cursor_char);
                 let cursor_char = if let Some(c) = char { c } else { '_' };
 
-                let mut cursor = cursor_char.to_string().slow_blink();
+                let mut cursor = cursor_char.to_string().rapid_blink();
                 if char.is_some() {
-                    cursor = cursor.on_dark_gray();
+                    cursor = cursor.underlined();
                 }
 
                 let the_cusor = Line::from(vec![cursor]);
@@ -117,7 +138,7 @@ impl EditorMode for InsertMode {
                         .alignment(ratatui::layout::Alignment::Left),
                     ratatui::layout::Rect::new(
                         buffer.cursor_char as u16,
-                        (buffer.cursor_line - buffer.scroll_offset) as u16,
+                        (buffer.cursor_line - buffer.scroll_offset + 3) as u16,
                         1,
                         1,
                     ),

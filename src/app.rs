@@ -51,6 +51,7 @@ impl App {
         };
 
         app.app_state.buffers.push(BufferEntry::default());
+        app.app_state.buffers[0].name = "untitled".to_string();
 
         app
     }
