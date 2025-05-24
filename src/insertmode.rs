@@ -14,6 +14,15 @@ use crate::{
 #[derive(Default)]
 pub struct InsertMode;
 
+/// returns the byte index of a given "character"
+fn graphemeindex_to_byte_pos(data: &str, index: usize) -> usize {
+    let indices: Vec<(usize, char)> = data.char_indices().collect();
+    if let Some((index, byte)) = indices.iter().skip(index - 1).next() {
+        return *index;
+    }
+    0
+}
+
 impl EditorMode for InsertMode {
     fn mode_name(&self) -> &'static str {
         "INSERT"
@@ -39,23 +48,31 @@ impl EditorMode for InsertMode {
             KeyCode::Char(c) => {
                 let current_line = buffer.buffer.line_at_mut(buffer.cursor_line);
                 if let Some(line) = current_line {
-                    line.insert_str(buffer.cursor_char, c.to_string().as_str());
-                    buffer.cursor_char += 1;
+                    line.insert_str(buffer.cursor_byte_position, c.to_string().as_str());
+                    buffer.cursor_byte_position += c.len_utf8();
+                    buffer.cursor_render_position += 1;
                 }
                 buffer.modified = true;
             }
             KeyCode::Backspace => {
+                let char_size = buffer.char_size_before_cursor().unwrap();
                 let current_line = buffer.buffer.line_at_mut(buffer.cursor_line);
+
                 if let Some(line) = current_line {
-                    if buffer.cursor_char > 0 {
-                        line.remove(buffer.cursor_char - 1);
-                        buffer.cursor_char -= 1;
+                    if buffer.cursor_byte_position > 0 {
+                        // we need to find, the correct character
+                        let pos_to_remove =
+                            graphemeindex_to_byte_pos(line.as_str(), buffer.cursor_render_position);
+                        //line.remove(buffer.cursor_byte_position - 1);
+                        line.remove(pos_to_remove);
+                        buffer.cursor_byte_position -= char_size;
+                        buffer.cursor_render_position -= 1;
                     } else {
                         if buffer.buffer.num_lines() >= 1 {
                             buffer.buffer.remove_line_at(buffer.cursor_line);
                             buffer.cursor_line = buffer.cursor_line.saturating_sub(1);
                             if let Some(line) = buffer.buffer.line_at(buffer.cursor_line) {
-                                buffer.cursor_char = line.len();
+                                buffer.cursor_byte_position = line.len();
                             } else {
                                 buffer.cursor_line = 0;
                             }
@@ -67,30 +84,36 @@ impl EditorMode for InsertMode {
             KeyCode::Enter => {
                 buffer
                     .buffer
-                    .break_line_at(buffer.cursor_line, buffer.cursor_char);
+                    .break_line_at(buffer.cursor_line, buffer.cursor_byte_position);
                 buffer.cursor_line += 1;
-                buffer.cursor_char = 0;
+                buffer.cursor_byte_position = 0;
+                buffer.cursor_render_position = 0;
             }
             KeyCode::Up => {
                 if buffer.cursor_line > 0 {
                     buffer.cursor_line -= 1;
-                    buffer.cursor_char = buffer.buffer.line_at(buffer.cursor_line).unwrap().len();
+                    buffer.cursor_byte_position =
+                        buffer.buffer.line_at(buffer.cursor_line).unwrap().len();
                 }
             }
             KeyCode::Down => {
                 if buffer.cursor_line < buffer.buffer.num_lines() - 1 {
                     buffer.cursor_line += 1;
-                    buffer.cursor_char = 0;
+                    buffer.cursor_byte_position = 0;
+                    buffer.cursor_render_position = 0;
                 }
             }
             KeyCode::Left => {
-                if buffer.cursor_char > 0 {
-                    buffer.cursor_char -= 1;
+                if buffer.cursor_render_position > 0 {
+                    buffer.cursor_byte_position -= buffer.char_size_at_cursor().unwrap();
                 }
             }
             KeyCode::Right => {
-                if buffer.cursor_char < buffer.buffer.line_at(buffer.cursor_line).unwrap().len() {
-                    buffer.cursor_char += 1;
+                if buffer.cursor_byte_position
+                    < buffer.buffer.line_at(buffer.cursor_line).unwrap().len()
+                {
+                    buffer.cursor_render_position += 1;
+                    buffer.cursor_byte_position += buffer.char_size_at_cursor().unwrap();
                 }
             }
             _ => (),
@@ -127,7 +150,7 @@ impl EditorMode for InsertMode {
             let effective_line = id + buffer.scroll_offset;
             if buffer.cursor_line == effective_line {
                 // get character under cursor
-                let char = line.chars().nth(buffer.cursor_char);
+                let char = line.chars().nth(buffer.cursor_byte_position);
                 let cursor_char = if let Some(c) = char { c } else { '_' };
 
                 let mut cursor = cursor_char.to_string().rapid_blink();
@@ -141,7 +164,7 @@ impl EditorMode for InsertMode {
                     ratatui::widgets::Paragraph::new(the_cusor)
                         .alignment(ratatui::layout::Alignment::Left),
                     ratatui::layout::Rect::new(
-                        buffer.cursor_char as u16,
+                        buffer.cursor_byte_position as u16,
                         (buffer.cursor_line - buffer.scroll_offset + 3) as u16,
                         1,
                         1,
@@ -202,7 +225,7 @@ mod tests {
 
         app_state.buffers[0].buffer.lines.push("abc".to_string());
         app_state.buffers[0].cursor_line = 1;
-        app_state.buffers[0].cursor_char = 2;
+        app_state.buffers[0].cursor_byte_position = 2;
         insertmode.handle_key_event(
             crossterm::event::KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE),
             &mut app_state,
@@ -212,5 +235,62 @@ mod tests {
             app_state.buffers[0].buffer.line_at(2),
             Some(&"c".to_string())
         );
+    }
+
+    #[test]
+    pub fn inject_diacritic_sets_renderpos_correctly() {
+        let mut app_state = make_default_app_state();
+        let mut insertmode = InsertMode::default();
+
+        app_state.buffers[0].buffer.lines.push("abc".to_string());
+        app_state.buffers[0].cursor_line = 1;
+        app_state.buffers[0].cursor_byte_position = 2;
+        app_state.buffers[0].cursor_render_position = 2;
+        insertmode.handle_key_event(
+            crossterm::event::KeyEvent::new(KeyCode::Char('ä'), KeyModifiers::NONE),
+            &mut app_state,
+        );
+
+        assert_eq!(app_state.buffers[0].cursor_byte_position, 4);
+        assert_eq!(app_state.buffers[0].cursor_render_position, 3);
+    }
+
+    #[test]
+    pub fn remove_diacritic_sets_renderpos_correctly() {
+        let mut app_state = make_default_app_state();
+        let mut insertmode = InsertMode::default();
+
+        app_state.buffers[0].buffer.lines.push("abcÖ".to_string());
+        app_state.buffers[0].cursor_line = 1;
+        app_state.buffers[0].cursor_byte_position = 5;
+        app_state.buffers[0].cursor_render_position = 4;
+        insertmode.handle_key_event(
+            crossterm::event::KeyEvent::new(KeyCode::Backspace, KeyModifiers::NONE),
+            &mut app_state,
+        );
+
+        assert_eq!(app_state.buffers[0].cursor_byte_position, 3);
+        assert_eq!(app_state.buffers[0].cursor_render_position, 3);
+        assert_eq!(app_state.buffers[0].buffer.lines[1], "abc");
+    }
+
+    #[test]
+    pub fn move_cursor_to_line_with_diacritic_sets_position_correctly() {
+        let mut app_state = make_default_app_state();
+        let mut insertmode = InsertMode::default();
+
+        app_state.buffers[0].buffer.lines.push("abcÖde".to_string());
+        app_state.buffers[0].buffer.lines.push("foobar".to_string());
+        app_state.buffers[0].cursor_line = 2;
+        app_state.buffers[0].cursor_byte_position = 4;
+        app_state.buffers[0].cursor_render_position = 4;
+        insertmode.handle_key_event(
+            crossterm::event::KeyEvent::new(KeyCode::Up, KeyModifiers::NONE),
+            &mut app_state,
+        );
+
+        assert_eq!(app_state.buffers[0].cursor_line, 1);
+        assert_eq!(app_state.buffers[0].cursor_byte_position, 5);
+        assert_eq!(app_state.buffers[0].cursor_render_position, 4);
     }
 }

@@ -32,6 +32,20 @@ impl Buffer {
         self.lines.get(index)
     }
 
+    pub fn char_at(&self, line: usize, char_index: usize) -> Option<char> {
+        if let Some(ln) = self.line_at(line) {
+            return ln.chars().skip(char_index).next();
+        }
+        None
+    }
+
+    pub fn char_size_at(&self, line: usize, char_index: usize) -> Option<usize> {
+        if let Some(c) = self.char_at(line, char_index) {
+            return Some(c.len_utf8());
+        }
+        None
+    }
+
     pub fn line_at_mut(&mut self, index: usize) -> Option<&mut String> {
         self.lines.get_mut(index)
     }

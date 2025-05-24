@@ -15,12 +15,28 @@ pub struct BufferEntry {
     pub name: String,
     pub buffer: Buffer,
     pub cursor_line: usize,
-    pub cursor_char: usize,
+    pub cursor_byte_position: usize,
+    pub cursor_render_position: usize,
     pub modified: bool,
     pub scroll_offset: usize,
 
     pub selection_start: Option<(usize, usize)>, // line + char
     pub selection_end: Option<(usize, usize)>,   // line + char
+}
+
+impl BufferEntry {
+    pub fn char_size_at_cursor(&self) -> Option<usize> {
+        self.buffer
+            .char_size_at(self.cursor_line, self.cursor_render_position)
+    }
+
+    pub fn char_size_before_cursor(&self) -> Option<usize> {
+        if self.cursor_render_position == 0 {
+            return None;
+        }
+        self.buffer
+            .char_size_at(self.cursor_line, self.cursor_render_position - 1)
+    }
 }
 
 #[derive(Default)]
