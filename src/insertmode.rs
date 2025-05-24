@@ -160,6 +160,7 @@ impl EditorMode for InsertMode {
 
                 let the_cusor = Line::from(vec![cursor]);
 
+                // ToDo This crashes, when the cursor ends up outside of the visible area!
                 frame.render_widget(
                     ratatui::widgets::Paragraph::new(the_cusor)
                         .alignment(ratatui::layout::Alignment::Left),

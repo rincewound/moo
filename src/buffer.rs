@@ -65,7 +65,9 @@ impl Buffer {
     pub fn break_line_at(&mut self, line_index: usize, char_index: usize) {
         let line = self.lines.remove(line_index);
         let (left, right) = line.split_at(char_index);
-        self.lines.insert(line_index, left.to_string());
+        let mut new_left = left.to_string();
+        new_left.push('\n');
+        self.lines.insert(line_index, new_left);
         self.lines.insert(line_index + 1, right.to_string());
     }
 }
