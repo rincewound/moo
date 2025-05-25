@@ -150,7 +150,10 @@ impl NormalMode {
             },
             KeyCode::Left => rotate_buffer(app_state, -1),
             KeyCode::Right => rotate_buffer(app_state, 1),
-            KeyCode::Enter => self.active_popup = ActivePopup::None,
+            KeyCode::Enter => {
+                self.active_popup = ActivePopup::None
+                // It would be neat to trigger a mode change to Insert mode here.
+            }
             _ => {}
         }
     }

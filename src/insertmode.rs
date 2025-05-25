@@ -68,7 +68,7 @@ impl EditorMode for InsertMode {
                         buffer.cursor_byte_position -= char_size;
                         buffer.cursor_render_position -= 1;
                     } else {
-                        if buffer.buffer.num_lines() >= 1 {
+                        if buffer.buffer.num_lines() > 1 {
                             buffer.buffer.remove_line_at(buffer.cursor_line);
                             buffer.cursor_line = buffer.cursor_line.saturating_sub(1);
                             if let Some(line) = buffer.buffer.line_at(buffer.cursor_line) {
@@ -107,7 +107,8 @@ impl EditorMode for InsertMode {
             }
             KeyCode::Left => {
                 if buffer.cursor_render_position > 0 {
-                    buffer.cursor_byte_position -= buffer.char_size_at_cursor().unwrap();
+                    buffer.cursor_byte_position -= buffer.char_size_before_cursor().unwrap();
+                    buffer.cursor_render_position -= 1;
                 }
             }
             KeyCode::Right => {
