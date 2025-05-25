@@ -208,7 +208,6 @@ impl EditorMode for NormalMode {
             ActivePopup::RenameBuffer => {
                 self.render_rename_popup(frame, layout[2], app_state);
             }
-            _ => {}
         }
     }
 }

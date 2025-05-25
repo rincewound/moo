@@ -46,6 +46,13 @@ impl Buffer {
         None
     }
 
+    pub fn line_byte_length(&self, line: usize) -> Option<usize> {
+        if let Some(line) = self.line_at(line) {
+            return Some(line.chars().fold(0, |acc, c| acc + c.len_utf8()));
+        }
+        None
+    }
+
     pub fn line_at_mut(&mut self, index: usize) -> Option<&mut String> {
         self.lines.get_mut(index)
     }
@@ -146,7 +153,7 @@ mod tests {
         let mut b = Buffer::from("a\nboo\nc".to_string());
         b.break_line_at(1, 1);
         assert_eq!(b.line_at(0), Some(&"a".to_string()));
-        assert_eq!(b.line_at(1), Some(&"b".to_string()));
+        assert_eq!(b.line_at(1), Some(&"b\n".to_string()));
         assert_eq!(b.line_at(2), Some(&"oo".to_string()));
         assert_eq!(b.line_at(3), Some(&"c".to_string()));
     }

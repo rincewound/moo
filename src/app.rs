@@ -32,7 +32,7 @@ impl BufferEntry {
 
     pub fn char_size_before_cursor(&self) -> Option<usize> {
         if self.cursor_render_position == 0 {
-            return None;
+            return Some(0);
         }
         self.buffer
             .char_size_at(self.cursor_line, self.cursor_render_position - 1)

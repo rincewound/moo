@@ -92,8 +92,10 @@ impl EditorMode for InsertMode {
             KeyCode::Up => {
                 if buffer.cursor_line > 0 {
                     buffer.cursor_line -= 1;
+                    // Somewhat stupid, this will always move to the end of the line, ideally
+                    // we'd move to the closest grapheme given the previous cursor position
                     buffer.cursor_byte_position =
-                        buffer.buffer.line_at(buffer.cursor_line).unwrap().len();
+                        buffer.buffer.line_byte_length(buffer.cursor_line).unwrap();
                 }
             }
             KeyCode::Down => {
@@ -165,7 +167,7 @@ impl EditorMode for InsertMode {
                     ratatui::widgets::Paragraph::new(the_cusor)
                         .alignment(ratatui::layout::Alignment::Left),
                     ratatui::layout::Rect::new(
-                        buffer.cursor_byte_position as u16,
+                        buffer.cursor_render_position as u16,
                         (buffer.cursor_line - buffer.scroll_offset + 3) as u16,
                         1,
                         1,
@@ -291,7 +293,7 @@ mod tests {
         );
 
         assert_eq!(app_state.buffers[0].cursor_line, 1);
-        assert_eq!(app_state.buffers[0].cursor_byte_position, 5);
+        assert_eq!(app_state.buffers[0].cursor_byte_position, 7);
         assert_eq!(app_state.buffers[0].cursor_render_position, 4);
     }
 }
