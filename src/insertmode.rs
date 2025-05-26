@@ -16,6 +16,9 @@ pub struct InsertMode;
 
 /// returns the byte index of a given "character"
 fn graphemeindex_to_byte_pos(data: &str, index: usize) -> usize {
+    if index == 0 {
+        return 0;
+    }
     let indices: Vec<(usize, char)> = data.char_indices().collect();
     if let Some((index, byte)) = indices.iter().skip(index - 1).next() {
         return *index;
@@ -107,12 +110,14 @@ impl EditorMode for InsertMode {
             }
             KeyCode::Left => {
                 if buffer.cursor_render_position > 0 {
-                    buffer.cursor_byte_position -= buffer.char_size_before_cursor().unwrap();
-                    buffer.cursor_render_position -= 1;
+                    if let Some(delta) = buffer.char_size_before_cursor() {
+                        buffer.cursor_byte_position -= delta;
+                        buffer.cursor_render_position -= 1;
+                    }
                 }
             }
             KeyCode::Right => {
-                if buffer.cursor_byte_position
+                if buffer.cursor_render_position
                     < buffer.buffer.line_at(buffer.cursor_line).unwrap().len()
                 {
                     buffer.cursor_render_position += 1;

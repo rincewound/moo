@@ -26,8 +26,12 @@ pub struct BufferEntry {
 
 impl BufferEntry {
     pub fn char_size_at_cursor(&self) -> Option<usize> {
-        self.buffer
+        let res = self
+            .buffer
             .char_size_at(self.cursor_line, self.cursor_render_position)
+            .unwrap_or(0);
+
+        Some(res)
     }
 
     pub fn char_size_before_cursor(&self) -> Option<usize> {
