@@ -147,11 +147,16 @@ impl EditorMode for InsertMode {
             .skip(buffer.scroll_offset)
             .enumerate()
         {
-            let len = line.len() as u16;
+            let line_width = if line.len() < frame.area().width as usize - 1 {
+                line.len() as u16
+            } else {
+                frame.area().width as u16 - 1
+            };
+
             frame.render_widget(
                 ratatui::widgets::Paragraph::new(line.clone())
                     .alignment(ratatui::layout::Alignment::Left),
-                ratatui::layout::Rect::new(0, 3 + id as u16, len, 1),
+                ratatui::layout::Rect::new(0, 3 + id as u16, line_width, 1),
             );
 
             // render cursor:
@@ -169,16 +174,18 @@ impl EditorMode for InsertMode {
                 let the_cusor = Line::from(vec![cursor]);
 
                 // ToDo This crashes, when the cursor ends up outside of the visible area!
-                frame.render_widget(
-                    ratatui::widgets::Paragraph::new(the_cusor)
-                        .alignment(ratatui::layout::Alignment::Left),
-                    ratatui::layout::Rect::new(
-                        buffer.cursor_render_position as u16,
-                        (buffer.cursor_line - buffer.scroll_offset + 3) as u16,
-                        1,
-                        1,
-                    ),
-                );
+                if buffer.cursor_render_position < frame.area().width as usize {
+                    frame.render_widget(
+                        ratatui::widgets::Paragraph::new(the_cusor)
+                            .alignment(ratatui::layout::Alignment::Left),
+                        ratatui::layout::Rect::new(
+                            buffer.cursor_render_position as u16,
+                            (buffer.cursor_line - buffer.scroll_offset + 3) as u16,
+                            1,
+                            1,
+                        ),
+                    );
+                }
             }
         }
     }
