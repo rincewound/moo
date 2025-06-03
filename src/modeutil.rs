@@ -3,6 +3,9 @@ use ratatui::{
     widgets::Block,
 };
 
+use crossterm::event::{KeyCode, KeyModifiers};
+use ratatui::{style::Stylize, text::Line};
+
 use crate::app::ApplicationState;
 
 pub fn render_mode_header(
@@ -96,4 +99,68 @@ pub fn render_mode_header(
 pub fn rotate_buffer(app_state: &mut ApplicationState, direction: i32) {
     let next_buffer_id = app_state.current_buffer as i32 + direction;
     app_state.current_buffer = (next_buffer_id % app_state.buffers.len() as i32) as usize;
+}
+
+pub fn render(
+    mode_name: &str,
+    frame: &mut ratatui::Frame,
+    app_state: &crate::app::ApplicationState,
+) {
+    // ToDo: This should be generalized a bit for all modes!
+    let layout = Layout::default()
+        .direction(ratatui::layout::Direction::Vertical)
+        .constraints([Constraint::Length(3), Constraint::Min(1)])
+        .split(frame.area());
+
+    let buffer = &app_state.buffers[app_state.current_buffer];
+
+    // show buffer name + modified flag:
+    render_mode_header(frame, layout[0], mode_name, app_state);
+
+    for (id, line) in buffer
+        .buffer
+        .lines
+        .iter()
+        .skip(buffer.scroll_offset)
+        .enumerate()
+    {
+        let line_width = if line.len() < frame.area().width as usize - 1 {
+            line.len() as u16
+        } else {
+            frame.area().width as u16 - 1
+        };
+
+        frame.render_widget(
+            ratatui::widgets::Paragraph::new(line.clone())
+                .alignment(ratatui::layout::Alignment::Left),
+            ratatui::layout::Rect::new(0, 3 + id as u16, line_width, 1),
+        );
+
+        // render cursor:
+        let effective_line = id + buffer.scroll_offset;
+        if buffer.cursor_line == effective_line {
+            // get character under cursor
+            let char = line.chars().nth(buffer.cursor_byte_position);
+            let cursor_char = if let Some(c) = char { c } else { '_' };
+
+            let mut cursor = cursor_char.to_string().rapid_blink();
+            if char.is_some() {
+                cursor = cursor.underlined();
+            }
+
+            let the_cusor = Line::from(vec![cursor]);
+            if buffer.cursor_render_position < frame.area().width as usize {
+                frame.render_widget(
+                    ratatui::widgets::Paragraph::new(the_cusor)
+                        .alignment(ratatui::layout::Alignment::Left),
+                    ratatui::layout::Rect::new(
+                        buffer.cursor_render_position as u16,
+                        (buffer.cursor_line - buffer.scroll_offset + 3) as u16,
+                        1,
+                        1,
+                    ),
+                );
+            }
+        }
+    }
 }

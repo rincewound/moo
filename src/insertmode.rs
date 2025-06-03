@@ -1,14 +1,9 @@
 // use color_eyre::owo_colors::OwoColorize;
 use crossterm::event::{KeyCode, KeyModifiers};
-use ratatui::{
-    layout::{Constraint, Layout},
-    style::Stylize,
-    text::Line,
-};
 
 use crate::{
     mode::EditorMode,
-    modeutil::{render_mode_header, rotate_buffer},
+    modeutil::{self, rotate_buffer},
 };
 
 #[derive(Default)]
@@ -62,65 +57,7 @@ impl EditorMode for InsertMode {
     }
 
     fn render(&self, frame: &mut ratatui::Frame, app_state: &crate::app::ApplicationState) {
-        // ToDo: This should be generalized a bit for all modes!
-        let layout = Layout::default()
-            .direction(ratatui::layout::Direction::Vertical)
-            .constraints([Constraint::Length(3), Constraint::Min(1)])
-            .split(frame.area());
-
-        let buffer = &app_state.buffers[app_state.current_buffer];
-
-        // show buffer name + modified flag:
-        render_mode_header(frame, layout[0], self.mode_name(), app_state);
-
-        for (id, line) in buffer
-            .buffer
-            .lines
-            .iter()
-            .skip(buffer.scroll_offset)
-            .enumerate()
-        {
-            let line_width = if line.len() < frame.area().width as usize - 1 {
-                line.len() as u16
-            } else {
-                frame.area().width as u16 - 1
-            };
-
-            frame.render_widget(
-                ratatui::widgets::Paragraph::new(line.clone())
-                    .alignment(ratatui::layout::Alignment::Left),
-                ratatui::layout::Rect::new(0, 3 + id as u16, line_width, 1),
-            );
-
-            // render cursor:
-            let effective_line = id + buffer.scroll_offset;
-            if buffer.cursor_line == effective_line {
-                // get character under cursor
-                let char = line.chars().nth(buffer.cursor_byte_position);
-                let cursor_char = if let Some(c) = char { c } else { '_' };
-
-                let mut cursor = cursor_char.to_string().rapid_blink();
-                if char.is_some() {
-                    cursor = cursor.underlined();
-                }
-
-                let the_cusor = Line::from(vec![cursor]);
-
-                // ToDo This crashes, when the cursor ends up outside of the visible area!
-                if buffer.cursor_render_position < frame.area().width as usize {
-                    frame.render_widget(
-                        ratatui::widgets::Paragraph::new(the_cusor)
-                            .alignment(ratatui::layout::Alignment::Left),
-                        ratatui::layout::Rect::new(
-                            buffer.cursor_render_position as u16,
-                            (buffer.cursor_line - buffer.scroll_offset + 3) as u16,
-                            1,
-                            1,
-                        ),
-                    );
-                }
-            }
-        }
+        modeutil::render(self.mode_name(), frame, app_state);
     }
 }
 
