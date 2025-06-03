@@ -4,6 +4,7 @@ use app::App;
 
 mod app;
 mod buffer;
+mod bufferentry;
 mod insertmode;
 mod mode;
 mod modeutil;

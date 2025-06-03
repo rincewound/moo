@@ -1,0 +1,208 @@
+use crate::buffer::Buffer;
+
+#[derive(Default)]
+pub struct BufferEntry {
+    pub name: String,
+    pub buffer: Buffer,
+    pub cursor_line: usize,
+    pub cursor_byte_position: usize,
+    pub cursor_render_position: usize,
+    pub modified: bool,
+    pub scroll_offset: usize,
+
+    pub selection_start: Option<(usize, usize)>, // line + char
+    pub selection_end: Option<(usize, usize)>,   // line + char
+}
+
+fn graphemeindex_to_byte_pos(data: &str, index: usize) -> usize {
+    if index == 0 {
+        return 0;
+    }
+    let indices: Vec<(usize, char)> = data.char_indices().collect();
+    if let Some((index, byte)) = indices.iter().skip(index - 1).next() {
+        return *index;
+    }
+    0
+}
+
+impl BufferEntry {
+    pub fn char_size_at_cursor(&self) -> Option<usize> {
+        let res = self
+            .buffer
+            .char_size_at(self.cursor_line, self.cursor_render_position)
+            .unwrap_or(0);
+
+        Some(res)
+    }
+
+    pub fn char_size_before_cursor(&self) -> Option<usize> {
+        if self.cursor_render_position == 0 {
+            return Some(0);
+        }
+        self.buffer
+            .char_size_at(self.cursor_line, self.cursor_render_position - 1)
+    }
+
+    pub fn add_character(&mut self, c: char) {
+        let current_line = self.buffer.line_at_mut(self.cursor_line);
+        if let Some(line) = current_line {
+            line.insert_str(self.cursor_byte_position, c.to_string().as_str());
+            self.cursor_byte_position += c.len_utf8();
+            self.cursor_render_position += 1;
+        }
+        self.modified = true;
+    }
+
+    /// Remove the character before the current cursor position.
+    ///
+    /// If the cursor is at the beginning of a line, this will remove the line and
+    /// move the cursor to the previous line.
+    pub fn remove_character(&mut self) {
+        let char_size = self.char_size_before_cursor().unwrap();
+        let current_line = self.buffer.line_at_mut(self.cursor_line);
+
+        if let Some(line) = current_line {
+            if self.cursor_byte_position > 0 {
+                // we need to find, the correct character
+                let pos_to_remove =
+                    graphemeindex_to_byte_pos(line.as_str(), self.cursor_render_position);
+                //line.remove(buffer.cursor_byte_position - 1);
+                line.remove(pos_to_remove);
+                self.cursor_byte_position -= char_size;
+                self.cursor_render_position -= 1;
+            } else {
+                if self.buffer.num_lines() >= 1 {
+                    self.buffer.remove_line_at(self.cursor_line);
+                    self.cursor_line = self.cursor_line.saturating_sub(1);
+                    if let Some(line) = self.buffer.line_at(self.cursor_line) {
+                        self.cursor_byte_position = line.len();
+                    } else {
+                        self.cursor_line = 0;
+                    }
+                }
+            }
+        }
+        self.modified = true;
+    }
+
+    /// Insert a new line at the current position and move the cursor to the next line
+    ///
+    /// This will insert a new line at the current position and move the cursor to the beginning of the next line.
+    /// If the current line is the last line, a new line will be inserted at the end of the buffer.
+    /// If there are no lines in the buffer, a new line will be inserted at position 0.
+    pub fn new_line(&mut self) {
+        self.buffer
+            .break_line_at(self.cursor_line, self.cursor_byte_position);
+        self.cursor_line += 1;
+        self.cursor_byte_position = 0;
+        self.cursor_render_position = 0;
+        self.modified = true;
+    }
+
+    /// Move the cursor up one line.
+    ///
+    /// If the cursor is already at the first line, this does nothing.
+    ///
+    /// This implementation is somewhat stupid and will always move to the end of
+    /// the line. Ideally, this would move to the closest grapheme given the
+    /// previous cursor position.
+    pub fn move_cursor_up(&mut self) {
+        if self.cursor_line > 0 {
+            self.cursor_line -= 1;
+            // Somewhat stupid, this will always move to the end of the line, ideally
+            // we'd move to the closest grapheme given the previous cursor position
+            self.cursor_byte_position = self.buffer.line_byte_length(self.cursor_line).unwrap();
+        }
+    }
+
+    /// Move the cursor down one line.
+    ///
+    /// If the cursor is already at the last line, this does nothing.
+    pub fn move_cursor_down(&mut self) {
+        if self.cursor_line < self.buffer.num_lines() - 1 {
+            self.cursor_line += 1;
+            self.cursor_byte_position = 0;
+            self.cursor_render_position = 0;
+        }
+    }
+
+    /// Move the cursor one position to the left.
+    ///
+    /// If the cursor is not at the start of the line, this function moves the cursor
+    /// left by one grapheme and adjusts the byte position accordingly.
+
+    pub fn move_cursor_left(&mut self) {
+        if self.cursor_render_position > 0 {
+            if let Some(delta) = self.char_size_before_cursor() {
+                self.cursor_byte_position -= delta;
+                self.cursor_render_position -= 1;
+            }
+        }
+    }
+
+    /// Move the cursor one position to the right.
+    ///
+    /// If the cursor is not at the end of the line, this function moves the cursor
+    /// right by one grapheme and adjusts the byte position accordingly.
+    pub fn move_cursor_right(&mut self) {
+        if self.cursor_render_position < self.buffer.line_at(self.cursor_line).unwrap().len() {
+            self.cursor_render_position += 1;
+            self.cursor_byte_position += self.char_size_at_cursor().unwrap();
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    pub fn inject_backspace_modifies_buffer() {
+        let mut b = BufferEntry::default();
+        b.add_character('a');
+        b.remove_character();
+
+        let ln = b.buffer.line_at(0).unwrap();
+        assert_eq!(ln, "");
+    }
+
+    #[test]
+    pub fn inject_char_modifies_buffer() {
+        let mut b = BufferEntry::default();
+        b.add_character('a');
+
+        let ln = b.buffer.line_at(0).unwrap();
+        assert_eq!(ln, "a");
+    }
+
+    #[test]
+    pub fn inject_enter_modifies_buffer() {
+        let mut b = BufferEntry::default();
+        b.add_character('a');
+        b.new_line();
+
+        let ln = b.buffer.line_at(0).unwrap();
+        assert_eq!(ln, "a\n");
+
+        let ln = b.buffer.line_at(1).unwrap();
+        assert_eq!(ln, "");
+    }
+
+    #[test]
+    pub fn backspace_on_empty_line_removes_line() {
+        let mut b = BufferEntry::default();
+        assert_eq!(b.buffer.num_lines(), 1);
+        b.remove_character();
+        assert_eq!(b.buffer.num_lines(), 0);
+    }
+
+    #[test]
+    pub fn backspace_on_empty_buffer_does_not_crash() {
+        let mut b = BufferEntry::default();
+        assert_eq!(b.buffer.num_lines(), 1);
+        b.remove_character();
+        b.remove_character();
+        b.remove_character();
+        assert_eq!(b.buffer.num_lines(), 0);
+    }
+}

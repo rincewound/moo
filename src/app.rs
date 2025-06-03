@@ -5,43 +5,11 @@ use ratatui::{DefaultTerminal, Frame};
 
 use crate::{
     buffer::Buffer,
+    bufferentry::BufferEntry,
     insertmode::InsertMode,
     mode::{EditorMode, Mode},
     normalmode::NormalMode,
 };
-
-#[derive(Default)]
-pub struct BufferEntry {
-    pub name: String,
-    pub buffer: Buffer,
-    pub cursor_line: usize,
-    pub cursor_byte_position: usize,
-    pub cursor_render_position: usize,
-    pub modified: bool,
-    pub scroll_offset: usize,
-
-    pub selection_start: Option<(usize, usize)>, // line + char
-    pub selection_end: Option<(usize, usize)>,   // line + char
-}
-
-impl BufferEntry {
-    pub fn char_size_at_cursor(&self) -> Option<usize> {
-        let res = self
-            .buffer
-            .char_size_at(self.cursor_line, self.cursor_render_position)
-            .unwrap_or(0);
-
-        Some(res)
-    }
-
-    pub fn char_size_before_cursor(&self) -> Option<usize> {
-        if self.cursor_render_position == 0 {
-            return Some(0);
-        }
-        self.buffer
-            .char_size_at(self.cursor_line, self.cursor_render_position - 1)
-    }
-}
 
 #[derive(Default)]
 pub struct ApplicationState {
@@ -65,10 +33,6 @@ impl App {
         let app = App {
             ..Default::default()
         };
-
-        // app.app_state.buffers.push(BufferEntry::default());
-        // app.app_state.buffers[0].name = "untitled".to_string();
-
         app
     }
 

@@ -49,80 +49,25 @@ impl EditorMode for InsertMode {
         }
         match key_event.code {
             KeyCode::Char(c) => {
-                let current_line = buffer.buffer.line_at_mut(buffer.cursor_line);
-                if let Some(line) = current_line {
-                    line.insert_str(buffer.cursor_byte_position, c.to_string().as_str());
-                    buffer.cursor_byte_position += c.len_utf8();
-                    buffer.cursor_render_position += 1;
-                }
-                buffer.modified = true;
+                buffer.add_character(c);
             }
             KeyCode::Backspace => {
-                let char_size = buffer.char_size_before_cursor().unwrap();
-                let current_line = buffer.buffer.line_at_mut(buffer.cursor_line);
-
-                if let Some(line) = current_line {
-                    if buffer.cursor_byte_position > 0 {
-                        // we need to find, the correct character
-                        let pos_to_remove =
-                            graphemeindex_to_byte_pos(line.as_str(), buffer.cursor_render_position);
-                        //line.remove(buffer.cursor_byte_position - 1);
-                        line.remove(pos_to_remove);
-                        buffer.cursor_byte_position -= char_size;
-                        buffer.cursor_render_position -= 1;
-                    } else {
-                        if buffer.buffer.num_lines() > 1 {
-                            buffer.buffer.remove_line_at(buffer.cursor_line);
-                            buffer.cursor_line = buffer.cursor_line.saturating_sub(1);
-                            if let Some(line) = buffer.buffer.line_at(buffer.cursor_line) {
-                                buffer.cursor_byte_position = line.len();
-                            } else {
-                                buffer.cursor_line = 0;
-                            }
-                        }
-                    }
-                }
-                buffer.modified = true;
+                buffer.remove_character();
             }
             KeyCode::Enter => {
-                buffer
-                    .buffer
-                    .break_line_at(buffer.cursor_line, buffer.cursor_byte_position);
-                buffer.cursor_line += 1;
-                buffer.cursor_byte_position = 0;
-                buffer.cursor_render_position = 0;
+                buffer.new_line();
             }
             KeyCode::Up => {
-                if buffer.cursor_line > 0 {
-                    buffer.cursor_line -= 1;
-                    // Somewhat stupid, this will always move to the end of the line, ideally
-                    // we'd move to the closest grapheme given the previous cursor position
-                    buffer.cursor_byte_position =
-                        buffer.buffer.line_byte_length(buffer.cursor_line).unwrap();
-                }
+                buffer.move_cursor_up();
             }
             KeyCode::Down => {
-                if buffer.cursor_line < buffer.buffer.num_lines() - 1 {
-                    buffer.cursor_line += 1;
-                    buffer.cursor_byte_position = 0;
-                    buffer.cursor_render_position = 0;
-                }
+                buffer.move_cursor_down();
             }
             KeyCode::Left => {
-                if buffer.cursor_render_position > 0 {
-                    if let Some(delta) = buffer.char_size_before_cursor() {
-                        buffer.cursor_byte_position -= delta;
-                        buffer.cursor_render_position -= 1;
-                    }
-                }
+                buffer.move_cursor_left();
             }
             KeyCode::Right => {
-                if buffer.cursor_render_position
-                    < buffer.buffer.line_at(buffer.cursor_line).unwrap().len()
-                {
-                    buffer.cursor_render_position += 1;
-                    buffer.cursor_byte_position += buffer.char_size_at_cursor().unwrap();
-                }
+                buffer.move_cursor_right();
             }
             _ => (),
         }
@@ -193,7 +138,8 @@ impl EditorMode for InsertMode {
 
 #[cfg(test)]
 mod tests {
-    use crate::app::BufferEntry;
+
+    use crate::bufferentry::BufferEntry;
 
     use super::*;
 
@@ -217,23 +163,7 @@ mod tests {
             Some(&"a".to_string())
         );
     }
-    #[test]
-    pub fn inject_backspace_modifies_buffer() {
-        let mut app_state = make_default_app_state();
-        let mut insertmode = InsertMode::default();
 
-        app_state.buffers[0]
-            .buffer
-            .line_at_mut(0)
-            .unwrap()
-            .push('a');
-        insertmode.handle_key_event(
-            crossterm::event::KeyEvent::new(KeyCode::Backspace, KeyModifiers::NONE),
-            &mut app_state,
-        );
-
-        assert_eq!(app_state.buffers[0].buffer.line_at(0), None);
-    }
     #[test]
     pub fn inject_enter_modifies_buffer() {
         let mut app_state = make_default_app_state();

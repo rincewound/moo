@@ -9,6 +9,7 @@ use ratatui::{
 
 use crate::{
     app,
+    bufferentry::BufferEntry,
     mode::EditorMode,
     modeutil::{render_mode_header, rotate_buffer},
 };
@@ -225,8 +226,45 @@ fn close_buffer(app_state: &mut app::ApplicationState) {
 }
 
 fn new_buffer(app_state: &mut app::ApplicationState) {
-    let mut buff = app::BufferEntry::default();
+    let mut buff = BufferEntry::default();
     buff.name = "untitled".to_string();
     app_state.buffers.push(buff);
     app_state.current_buffer = app_state.buffers.len() - 1;
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    pub fn inject_backspace_modifies_buffer() {
+        let mut b = BufferEntry::default();
+        b.add_character('a');
+        b.remove_character();
+
+        let ln = b.buffer.line_at(0).unwrap();
+        assert_eq!(ln, "");
+    }
+
+    #[test]
+    pub fn inject_char_modifies_buffer() {
+        let mut b = BufferEntry::default();
+        b.add_character('a');
+
+        let ln = b.buffer.line_at(0).unwrap();
+        assert_eq!(ln, "a");
+    }
+
+    #[test]
+    pub fn inject_enter_modifies_buffer() {
+        let mut b = BufferEntry::default();
+        b.add_character('a');
+        b.new_line();
+
+        let ln = b.buffer.line_at(0).unwrap();
+        assert_eq!(ln, "a\n");
+
+        let ln = b.buffer.line_at(1).unwrap();
+        assert_eq!(ln, "");
+    }
 }
