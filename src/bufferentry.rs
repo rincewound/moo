@@ -88,9 +88,8 @@ impl BufferEntry {
 
     pub fn goto_line_end(&mut self) {
         if let Some(line) = self.buffer.line_at(self.cursor_line) {
-            self.cursor_render_position = line.len();
-            self.cursor_byte_position =
-                graphemeindex_to_byte_pos(line.as_str(), self.cursor_render_position)
+            self.cursor_render_position = self.buffer.line_char_length(self.cursor_line).unwrap();
+            self.cursor_byte_position = self.buffer.line_byte_length(self.cursor_line).unwrap();
         }
     }
 
@@ -168,9 +167,7 @@ impl BufferEntry {
     pub fn move_cursor_up(&mut self) {
         if self.cursor_line > 0 {
             self.cursor_line -= 1;
-            // Somewhat stupid, this will always move to the end of the line, ideally
-            // we'd move to the closest grapheme given the previous cursor position
-            self.cursor_byte_position = self.buffer.line_byte_length(self.cursor_line).unwrap();
+            self.goto_line_start();
         }
     }
 
@@ -180,8 +177,7 @@ impl BufferEntry {
     pub fn move_cursor_down(&mut self) {
         if self.cursor_line < self.buffer.num_lines() - 1 {
             self.cursor_line += 1;
-            self.cursor_byte_position = 0;
-            self.cursor_render_position = 0;
+            self.goto_line_start();
         }
     }
 
@@ -298,6 +294,15 @@ mod tests {
         b.skip_word_backward();
         assert_eq!(b.cursor_render_position, 0);
         b.skip_word_backward();
+        assert_eq!(b.cursor_render_position, 0);
+    }
+
+    #[test]
+    pub fn move_cursor_up_into_empty_line() {
+        let mut b = BufferEntry::default();
+        b.new_line();
+        inject_string(&mut b, "argh foo bar");
+        b.move_cursor_up();
         assert_eq!(b.cursor_render_position, 0);
     }
 }

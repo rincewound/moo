@@ -48,7 +48,8 @@ impl Buffer {
 
     pub fn line_byte_length(&self, line: usize) -> Option<usize> {
         if let Some(line) = self.line_at(line) {
-            return Some(line.chars().fold(0, |acc, c| acc + c.len_utf8()));
+            // - 1 to account for the newline
+            return Some(line.chars().fold(0, |acc, c| acc + c.len_utf8()) - 1);
         }
         None
     }
@@ -76,6 +77,14 @@ impl Buffer {
         new_left.push('\n');
         self.lines.insert(line_index, new_left);
         self.lines.insert(line_index + 1, right.to_string());
+    }
+
+    pub(crate) fn line_char_length(&self, cursor_line: usize) -> Option<usize> {
+        if let Some(line) = self.line_at(cursor_line) {
+            // -1 to account for the newline
+            return Some(line.chars().fold(0, |acc, c| acc + c.len_utf8()) - 1);
+        }
+        None
     }
 }
 

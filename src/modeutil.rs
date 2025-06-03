@@ -140,7 +140,7 @@ pub fn render(
         let effective_line = id + buffer.scroll_offset;
         if buffer.cursor_line == effective_line {
             // get character under cursor
-            let char = line.chars().nth(buffer.cursor_byte_position);
+            let char = line.chars().nth(buffer.cursor_render_position);
             let cursor_char = if let Some(c) = char { c } else { '_' };
 
             let mut cursor = cursor_char.to_string().rapid_blink();
