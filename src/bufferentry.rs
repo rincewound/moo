@@ -167,7 +167,7 @@ impl BufferEntry {
     pub fn move_cursor_up(&mut self) {
         if self.cursor_line > 0 {
             self.cursor_line -= 1;
-            self.goto_line_start();
+            self.goto_line_end();
         }
     }
 
@@ -177,7 +177,7 @@ impl BufferEntry {
     pub fn move_cursor_down(&mut self) {
         if self.cursor_line < self.buffer.num_lines() - 1 {
             self.cursor_line += 1;
-            self.goto_line_start();
+            self.goto_line_end();
         }
     }
 
@@ -188,10 +188,11 @@ impl BufferEntry {
 
     pub fn move_cursor_left(&mut self) {
         if self.cursor_render_position > 0 {
-            if let Some(delta) = self.char_size_before_cursor() {
-                self.cursor_byte_position -= delta;
-                self.cursor_render_position -= 1;
-            }
+            self.cursor_render_position -= 1;
+            self.cursor_byte_position = graphemeindex_to_byte_pos(
+                self.buffer.line_at(self.cursor_line).unwrap().as_str(),
+                self.cursor_render_position,
+            )
         }
     }
 
@@ -200,9 +201,13 @@ impl BufferEntry {
     /// If the cursor is not at the end of the line, this function moves the cursor
     /// right by one grapheme and adjusts the byte position accordingly.
     pub fn move_cursor_right(&mut self) {
-        if self.cursor_render_position < self.buffer.line_at(self.cursor_line).unwrap().len() {
+        if self.cursor_render_position < self.buffer.line_char_length(self.cursor_line).unwrap() {
             self.cursor_render_position += 1;
-            self.cursor_byte_position += self.char_size_at_cursor().unwrap();
+            // self.cursor_byte_position += self.char_size_at_cursor().unwrap();
+            self.cursor_byte_position = graphemeindex_to_byte_pos(
+                self.buffer.line_at(self.cursor_line).unwrap().as_str(),
+                self.cursor_render_position,
+            )
         }
     }
 }
