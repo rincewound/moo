@@ -8,6 +8,7 @@ use crate::{
     bufferentry::BufferEntry,
     insertmode::InsertMode,
     mode::{EditorMode, Mode},
+    navigationmode::NavigationMode,
     normalmode::NormalMode,
 };
 
@@ -26,6 +27,7 @@ pub struct App {
 
     normal_mode: NormalMode,
     insert_mode: InsertMode,
+    navigation_mode: NavigationMode,
 }
 
 impl App {
@@ -55,6 +57,7 @@ impl App {
         match self.current_mode {
             Mode::Normal => func(&self.normal_mode, &self.app_state),
             Mode::Insert => func(&self.insert_mode, &self.app_state),
+            Mode::Navigate => func(&self.navigation_mode, &self.app_state),
             _ => (),
         }
     }
@@ -66,6 +69,7 @@ impl App {
         match self.current_mode {
             Mode::Normal => func(&mut self.normal_mode, &mut self.app_state),
             Mode::Insert => func(&mut self.insert_mode, &mut self.app_state),
+            Mode::Navigate => func(&mut self.navigation_mode, &mut self.app_state),
             _ => panic!("Unknown mode"),
         }
     }

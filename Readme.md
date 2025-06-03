@@ -6,19 +6,19 @@ Mostly just idle curiosity on TUIs
 ## Usage
 
 * Insert Mode - Bearbeiten
-    * CTRL + <-/-> prev/next buffer
+    [x] CTRL + <-/-> prev/next buffer
 * Normal
 	* Öffnen (o)
-	* Speichern (w)
-	* Schließen (c)
-	* Neuer Buffer (n)
-	* Buffer wechseln (b)
-	* Buffer benennen (a)
+	[x] Speichern (w)
+	[x] Schließen (c)
+	[x] Neuer Buffer (n)
+	[x] Buffer wechseln (b)
+	[x] Buffer benennen (a)
 * Navigation (?)
-	* Wort überspringen (w)
-	* Zeilenende (e)
-	* Zeilenanfang (b)
-	* Hoch/ Runter (u/d)
+	[x] Wort überspringen (w)
+	[x] Zeilenende (e)
+	[x] Zeilenanfang (b)
+	[x] Hoch/ Runter (u/d)
 	* Seite hoch/runter (PgU/PgD)
 	* Suchen (f)
 * Auswählen
@@ -32,13 +32,9 @@ Mostly just idle curiosity on TUIs
 	* (Einfügen an aktueller Stelle) (p)
 
 ## Planned Features
-
-* Navigation
 * Fuzzy Open File
 * New File with paths
 * LSP Client ... maybe
 
 
 ## Bugs
-* Crash, when line gets too long
-* Crash, when writing diacritics (Umlaute)

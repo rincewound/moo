@@ -142,7 +142,7 @@ pub fn render(
         let effective_line = id + buffer.scroll_offset;
         if buffer.cursor_line == effective_line {
             // get character under cursor
-            let char = line.iter().nth(buffer.cursor_render_position);
+            let char = line.iter().nth(buffer.cursor_position);
             let cursor_char = if let Some(c) = char { c.clone() } else { '_' };
 
             let mut cursor = cursor_char.to_string().rapid_blink();
@@ -151,12 +151,12 @@ pub fn render(
             }
 
             let the_cusor = Line::from(vec![cursor]);
-            if buffer.cursor_render_position < frame.area().width as usize {
+            if buffer.cursor_position < frame.area().width as usize {
                 frame.render_widget(
                     ratatui::widgets::Paragraph::new(the_cusor)
                         .alignment(ratatui::layout::Alignment::Left),
                     ratatui::layout::Rect::new(
-                        buffer.cursor_render_position as u16,
+                        buffer.cursor_position as u16,
                         (buffer.cursor_line - buffer.scroll_offset + 3) as u16,
                         1,
                         1,

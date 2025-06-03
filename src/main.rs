@@ -8,6 +8,7 @@ mod bufferentry;
 mod insertmode;
 mod mode;
 mod modeutil;
+mod navigationmode;
 mod normalmode;
 
 fn main() -> io::Result<()> {
