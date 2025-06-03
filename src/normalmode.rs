@@ -66,10 +66,6 @@ impl NormalMode {
         ])
         .block(Block::bordered().title("Keys"));
 
-        let block = ratatui::widgets::Block::default()
-            .borders(ratatui::widgets::Borders::ALL)
-            .title("Normal Mode");
-
         frame.render_widget(lst, dest);
     }
 

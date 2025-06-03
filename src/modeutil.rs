@@ -1,9 +1,8 @@
 use ratatui::{
-    layout::{Constraint, Direction, Layout},
+    layout::{Constraint, Layout},
     widgets::Block,
 };
 
-use crossterm::event::{KeyCode, KeyModifiers};
 use ratatui::{style::Stylize, text::Line};
 
 use crate::app::ApplicationState;
@@ -16,11 +15,6 @@ pub fn render_mode_header(
 ) {
     // renders a box on top with the current mode's name,
     // the active buffer names and the current line number
-
-    let layout = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints([Constraint::Length(3), Constraint::Min(1)])
-        .split(frame.area());
 
     // as output: Select the first four buffers starting at the active one
     // and show their name and modified flag. If there are more buffers, add

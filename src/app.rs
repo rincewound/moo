@@ -4,7 +4,6 @@ use crossterm::event::{self, Event, KeyCode, KeyEventKind};
 use ratatui::{DefaultTerminal, Frame};
 
 use crate::{
-    buffer::Buffer,
     bufferentry::BufferEntry,
     insertmode::InsertMode,
     mode::{EditorMode, Mode},
