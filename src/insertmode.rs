@@ -14,18 +14,6 @@ use crate::{
 #[derive(Default)]
 pub struct InsertMode;
 
-/// returns the byte index of a given "character"
-fn graphemeindex_to_byte_pos(data: &str, index: usize) -> usize {
-    if index == 0 {
-        return 0;
-    }
-    let indices: Vec<(usize, char)> = data.char_indices().collect();
-    if let Some((index, byte)) = indices.iter().skip(index - 1).next() {
-        return *index;
-    }
-    0
-}
-
 impl EditorMode for InsertMode {
     fn mode_name(&self) -> &'static str {
         "INSERT"

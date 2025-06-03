@@ -19,7 +19,7 @@ fn graphemeindex_to_byte_pos(data: &str, index: usize) -> usize {
         return 0;
     }
     let indices: Vec<(usize, char)> = data.char_indices().collect();
-    if let Some((index, byte)) = indices.iter().skip(index - 1).next() {
+    if let Some((index, _)) = indices.iter().skip(index - 1).next() {
         return *index;
     }
     0
@@ -33,6 +33,65 @@ impl BufferEntry {
             .unwrap_or(0);
 
         Some(res)
+    }
+
+    pub fn skip_word_forward(&mut self) {
+        let current_line = self.buffer.line_at(self.cursor_line).unwrap();
+
+        // start position is the next non whitespace character:
+        let mut pos = self.cursor_render_position;
+        while pos < current_line.len() {
+            if !current_line.chars().nth(pos).unwrap().is_whitespace() {
+                break;
+            }
+            pos += 1;
+        }
+        self.cursor_render_position = pos;
+
+        let mut pos = self.cursor_render_position;
+        while pos < current_line.len() {
+            if current_line.chars().nth(pos).unwrap().is_whitespace() {
+                break;
+            }
+            pos += 1;
+        }
+        self.cursor_render_position = pos;
+    }
+
+    pub fn skip_word_backward(&mut self) {
+        let current_line = self.buffer.line_at(self.cursor_line).unwrap();
+
+        // start position is the next non whitespace character:
+        let mut pos = self.cursor_render_position;
+        while pos > 0 {
+            if !current_line.chars().nth(pos - 1).unwrap().is_whitespace() {
+                break;
+            }
+            pos -= 1;
+        }
+        self.cursor_render_position = pos;
+
+        let mut pos = self.cursor_render_position;
+        while pos > 0 {
+            if current_line.chars().nth(pos - 1).unwrap().is_whitespace() {
+                break;
+            }
+            pos -= 1;
+        }
+        self.cursor_render_position = pos;
+    }
+
+    pub fn goto_line_start(&mut self) {
+        self.cursor_render_position = 0;
+        self.cursor_byte_position = 0;
+    }
+
+    pub fn goto_line_end(&mut self) {
+        if let Some(line) = self.buffer.line_at(self.cursor_line) {
+            self.cursor_render_position = line.len();
+            self.cursor_byte_position =
+                graphemeindex_to_byte_pos(line.as_str(), self.cursor_render_position)
+        }
     }
 
     pub fn char_size_before_cursor(&self) -> Option<usize> {
@@ -156,6 +215,12 @@ impl BufferEntry {
 mod tests {
     use super::*;
 
+    fn inject_string(b: &mut BufferEntry, s: &str) {
+        for c in s.chars() {
+            b.add_character(c);
+        }
+    }
+
     #[test]
     pub fn inject_backspace_modifies_buffer() {
         let mut b = BufferEntry::default();
@@ -204,5 +269,35 @@ mod tests {
         b.remove_character();
         b.remove_character();
         assert_eq!(b.buffer.num_lines(), 0);
+    }
+
+    #[test]
+    pub fn can_skip_word_forward() {
+        let mut b = BufferEntry::default();
+        inject_string(&mut b, "argh foo bar");
+        b.goto_line_start();
+        b.skip_word_forward();
+        assert_eq!(b.cursor_render_position, 4);
+        b.skip_word_forward();
+        assert_eq!(b.cursor_render_position, 8);
+        b.skip_word_forward();
+        assert_eq!(b.cursor_render_position, 12);
+        b.skip_word_forward();
+        assert_eq!(b.cursor_render_position, 12);
+    }
+
+    #[test]
+    pub fn can_skip_word_backward() {
+        let mut b = BufferEntry::default();
+        inject_string(&mut b, "argh foo bar");
+        b.goto_line_end();
+        b.skip_word_backward();
+        assert_eq!(b.cursor_render_position, 9);
+        b.skip_word_backward();
+        assert_eq!(b.cursor_render_position, 5);
+        b.skip_word_backward();
+        assert_eq!(b.cursor_render_position, 0);
+        b.skip_word_backward();
+        assert_eq!(b.cursor_render_position, 0);
     }
 }
