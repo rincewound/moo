@@ -122,12 +122,7 @@ impl BufferEntry {
 
         if let Some(line) = current_line {
             if self.cursor_render_position > 0 {
-                // we need to find, the correct character
-                // let pos_to_remove =
-                //     graphemeindex_to_byte_pos(line.as_str(), self.cursor_render_position);
-                //line.remove(buffer.cursor_byte_position - 1);
-                line.remove(self.cursor_render_position);
-                //self.cursor_byte_position -= char_size;
+                line.remove(self.cursor_render_position - 1);
                 self.cursor_render_position -= 1;
             } else {
                 if self.buffer.num_lines() >= 1 {
@@ -168,7 +163,10 @@ impl BufferEntry {
     pub fn move_cursor_up(&mut self) {
         if self.cursor_line > 0 {
             self.cursor_line -= 1;
-            self.goto_line_end();
+            if self.buffer.line_char_length(self.cursor_line).unwrap() < self.cursor_render_position
+            {
+                self.goto_line_end();
+            }
         }
     }
 
@@ -178,7 +176,10 @@ impl BufferEntry {
     pub fn move_cursor_down(&mut self) {
         if self.cursor_line < self.buffer.num_lines() - 1 {
             self.cursor_line += 1;
-            self.goto_line_end();
+            if self.buffer.line_char_length(self.cursor_line).unwrap() < self.cursor_render_position
+            {
+                self.goto_line_end();
+            }
         }
     }
 
@@ -190,10 +191,6 @@ impl BufferEntry {
     pub fn move_cursor_left(&mut self) {
         if self.cursor_render_position > 0 {
             self.cursor_render_position -= 1;
-            // self.cursor_byte_position = graphemeindex_to_byte_pos(
-            //     self.buffer.line_at(self.cursor_line).unwrap().as_str(),
-            //     self.cursor_render_position,
-            // )
         }
     }
 
@@ -204,10 +201,6 @@ impl BufferEntry {
     pub fn move_cursor_right(&mut self) {
         if self.cursor_render_position < self.buffer.line_char_length(self.cursor_line).unwrap() {
             self.cursor_render_position += 1;
-            // self.cursor_byte_position = graphemeindex_to_byte_pos(
-            //     self.buffer.line_at(self.cursor_line).unwrap().as_str(),
-            //     self.cursor_render_position,
-            // )
         }
     }
 }
@@ -254,7 +247,7 @@ mod tests {
         b.new_line();
 
         let ln = b.buffer.line_at(0).unwrap();
-        assert_line_equals(ln, "a\n");
+        assert_line_equals(ln, "a");
 
         let ln = b.buffer.line_at(1).unwrap();
         assert_line_equals(ln, "");

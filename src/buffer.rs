@@ -182,7 +182,7 @@ mod tests {
         let mut b = Buffer::from("a\nboo\nc".to_string());
         b.break_line_at(1, 1);
         assert_line_equals_optional(b.line_at(0), Some(&"a".to_string()));
-        assert_line_equals_optional(b.line_at(1), Some(&"b\n".to_string()));
+        assert_line_equals_optional(b.line_at(1), Some(&"b".to_string()));
         assert_line_equals_optional(b.line_at(2), Some(&"oo".to_string()));
         assert_line_equals_optional(b.line_at(3), Some(&"c".to_string()));
     }
