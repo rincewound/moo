@@ -167,8 +167,8 @@ fn write_buffer(app_state: &mut app::ApplicationState) {
     // persists buffer as it is to file
     let mut file = std::fs::File::create(&buffer.name).unwrap();
     // Note: No explicit line endings are added.
-    file.write_all(buffer.buffer.lines.join("").as_bytes())
-        .unwrap();
+    // file.write_all(buffer.buffer.lines.join("").as_bytes())
+    //     .unwrap();
 }
 
 impl EditorMode for NormalMode {

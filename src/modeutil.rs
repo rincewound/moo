@@ -130,8 +130,10 @@ pub fn render(
             frame.area().width as u16 - 1
         };
 
+        let line_as_string = line.iter().map(|c| c.to_string()).collect::<String>();
+
         frame.render_widget(
-            ratatui::widgets::Paragraph::new(line.clone())
+            ratatui::widgets::Paragraph::new(line_as_string)
                 .alignment(ratatui::layout::Alignment::Left),
             ratatui::layout::Rect::new(0, 3 + id as u16, line_width, 1),
         );
@@ -140,8 +142,8 @@ pub fn render(
         let effective_line = id + buffer.scroll_offset;
         if buffer.cursor_line == effective_line {
             // get character under cursor
-            let char = line.chars().nth(buffer.cursor_render_position);
-            let cursor_char = if let Some(c) = char { c } else { '_' };
+            let char = line.iter().nth(buffer.cursor_render_position);
+            let cursor_char = if let Some(c) = char { c.clone() } else { '_' };
 
             let mut cursor = cursor_char.to_string().rapid_blink();
             if char.is_some() {

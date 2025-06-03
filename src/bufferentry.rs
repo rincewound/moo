@@ -5,7 +5,7 @@ pub struct BufferEntry {
     pub name: String,
     pub buffer: Buffer,
     pub cursor_line: usize,
-    pub cursor_byte_position: usize,
+    // pub cursor_byte_position: usize,
     pub cursor_render_position: usize,
     pub modified: bool,
     pub scroll_offset: usize,
@@ -41,7 +41,7 @@ impl BufferEntry {
         // start position is the next non whitespace character:
         let mut pos = self.cursor_render_position;
         while pos < current_line.len() {
-            if !current_line.chars().nth(pos).unwrap().is_whitespace() {
+            if !current_line.iter().nth(pos).unwrap().is_whitespace() {
                 break;
             }
             pos += 1;
@@ -50,7 +50,7 @@ impl BufferEntry {
 
         let mut pos = self.cursor_render_position;
         while pos < current_line.len() {
-            if current_line.chars().nth(pos).unwrap().is_whitespace() {
+            if current_line.iter().nth(pos).unwrap().is_whitespace() {
                 break;
             }
             pos += 1;
@@ -64,7 +64,7 @@ impl BufferEntry {
         // start position is the next non whitespace character:
         let mut pos = self.cursor_render_position;
         while pos > 0 {
-            if !current_line.chars().nth(pos - 1).unwrap().is_whitespace() {
+            if !current_line.iter().nth(pos - 1).unwrap().is_whitespace() {
                 break;
             }
             pos -= 1;
@@ -73,7 +73,7 @@ impl BufferEntry {
 
         let mut pos = self.cursor_render_position;
         while pos > 0 {
-            if current_line.chars().nth(pos - 1).unwrap().is_whitespace() {
+            if current_line.iter().nth(pos - 1).unwrap().is_whitespace() {
                 break;
             }
             pos -= 1;
@@ -83,13 +83,13 @@ impl BufferEntry {
 
     pub fn goto_line_start(&mut self) {
         self.cursor_render_position = 0;
-        self.cursor_byte_position = 0;
+        // self.cursor_byte_position = 0;
     }
 
     pub fn goto_line_end(&mut self) {
         if let Some(line) = self.buffer.line_at(self.cursor_line) {
             self.cursor_render_position = self.buffer.line_char_length(self.cursor_line).unwrap();
-            self.cursor_byte_position = self.buffer.line_byte_length(self.cursor_line).unwrap();
+            // self.cursor_byte_position = self.buffer.line_byte_length(self.cursor_line).unwrap();
         }
     }
 
@@ -104,8 +104,9 @@ impl BufferEntry {
     pub fn add_character(&mut self, c: char) {
         let current_line = self.buffer.line_at_mut(self.cursor_line);
         if let Some(line) = current_line {
-            line.insert_str(self.cursor_byte_position, c.to_string().as_str());
-            self.cursor_byte_position += c.len_utf8();
+            line.insert(self.cursor_render_position, c);
+            // line.insert(self.cursor_byte_position, c);
+            // self.cursor_byte_position += c.len_utf8();
             self.cursor_render_position += 1;
         }
         self.modified = true;
@@ -116,24 +117,24 @@ impl BufferEntry {
     /// If the cursor is at the beginning of a line, this will remove the line and
     /// move the cursor to the previous line.
     pub fn remove_character(&mut self) {
-        let char_size = self.char_size_before_cursor().unwrap();
+        // let char_size = self.char_size_before_cursor().unwrap();
         let current_line = self.buffer.line_at_mut(self.cursor_line);
 
         if let Some(line) = current_line {
-            if self.cursor_byte_position > 0 {
+            if self.cursor_render_position > 0 {
                 // we need to find, the correct character
-                let pos_to_remove =
-                    graphemeindex_to_byte_pos(line.as_str(), self.cursor_render_position);
+                // let pos_to_remove =
+                //     graphemeindex_to_byte_pos(line.as_str(), self.cursor_render_position);
                 //line.remove(buffer.cursor_byte_position - 1);
-                line.remove(pos_to_remove);
-                self.cursor_byte_position -= char_size;
+                line.remove(self.cursor_render_position);
+                //self.cursor_byte_position -= char_size;
                 self.cursor_render_position -= 1;
             } else {
                 if self.buffer.num_lines() >= 1 {
                     self.buffer.remove_line_at(self.cursor_line);
                     self.cursor_line = self.cursor_line.saturating_sub(1);
                     if let Some(line) = self.buffer.line_at(self.cursor_line) {
-                        self.cursor_byte_position = line.len();
+                        self.cursor_render_position = line.len();
                     } else {
                         self.cursor_line = 0;
                     }
@@ -150,9 +151,9 @@ impl BufferEntry {
     /// If there are no lines in the buffer, a new line will be inserted at position 0.
     pub fn new_line(&mut self) {
         self.buffer
-            .break_line_at(self.cursor_line, self.cursor_byte_position);
+            .break_line_at(self.cursor_line, self.cursor_render_position);
         self.cursor_line += 1;
-        self.cursor_byte_position = 0;
+        //self.cursor_byte_position = 0;
         self.cursor_render_position = 0;
         self.modified = true;
     }
@@ -189,10 +190,10 @@ impl BufferEntry {
     pub fn move_cursor_left(&mut self) {
         if self.cursor_render_position > 0 {
             self.cursor_render_position -= 1;
-            self.cursor_byte_position = graphemeindex_to_byte_pos(
-                self.buffer.line_at(self.cursor_line).unwrap().as_str(),
-                self.cursor_render_position,
-            )
+            // self.cursor_byte_position = graphemeindex_to_byte_pos(
+            //     self.buffer.line_at(self.cursor_line).unwrap().as_str(),
+            //     self.cursor_render_position,
+            // )
         }
     }
 
@@ -203,18 +204,23 @@ impl BufferEntry {
     pub fn move_cursor_right(&mut self) {
         if self.cursor_render_position < self.buffer.line_char_length(self.cursor_line).unwrap() {
             self.cursor_render_position += 1;
-            // self.cursor_byte_position += self.char_size_at_cursor().unwrap();
-            self.cursor_byte_position = graphemeindex_to_byte_pos(
-                self.buffer.line_at(self.cursor_line).unwrap().as_str(),
-                self.cursor_render_position,
-            )
+            // self.cursor_byte_position = graphemeindex_to_byte_pos(
+            //     self.buffer.line_at(self.cursor_line).unwrap().as_str(),
+            //     self.cursor_render_position,
+            // )
         }
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use crate::buffer::Line;
+
     use super::*;
+
+    fn assert_line_equals(l1: &Line, l2: &str) {
+        assert_eq!(l1.iter().collect::<String>().as_str(), l2);
+    }
 
     fn inject_string(b: &mut BufferEntry, s: &str) {
         for c in s.chars() {
@@ -229,7 +235,7 @@ mod tests {
         b.remove_character();
 
         let ln = b.buffer.line_at(0).unwrap();
-        assert_eq!(ln, "");
+        assert_line_equals(ln, "");
     }
 
     #[test]
@@ -238,7 +244,7 @@ mod tests {
         b.add_character('a');
 
         let ln = b.buffer.line_at(0).unwrap();
-        assert_eq!(ln, "a");
+        assert_line_equals(ln, "a");
     }
 
     #[test]
@@ -248,10 +254,10 @@ mod tests {
         b.new_line();
 
         let ln = b.buffer.line_at(0).unwrap();
-        assert_eq!(ln, "a\n");
+        assert_line_equals(ln, "a\n");
 
         let ln = b.buffer.line_at(1).unwrap();
-        assert_eq!(ln, "");
+        assert_line_equals(ln, "");
     }
 
     #[test]
