@@ -183,6 +183,8 @@ impl NormalMode {
                     return;
                 }
                 self.active_popup = ActivePopup::None;
+                self.fuzzy_open_suggestion = String::new();
+                self.fuzzy_open_search = String::new();
             }
             KeyCode::Char(c) => {
                 let buffer = &mut app_state.buffers[app_state.current_buffer];
@@ -224,6 +226,7 @@ impl NormalMode {
 
     fn update_suggsestions(&mut self, app_state: &mut app::ApplicationState) {
         if self.fuzzy_open_search.is_empty() {
+            self.fuzzy_open_suggestion = String::new();
             return;
         }
 
