@@ -1,6 +1,7 @@
 pub type Line = Vec<char>;
 
 /// A buffer represents the contents of a file as a vec of lines
+
 pub struct Buffer {
     pub lines: Vec<Line>,
 }
@@ -29,6 +30,10 @@ impl Buffer {
         let mut b = Buffer { lines: Vec::new() };
         b.lines.push(string_to_line(""));
         b
+    }
+
+    pub fn empty_buffer() -> Buffer {
+        Buffer { lines: Vec::new() }
     }
 
     pub fn num_lines(&self) -> usize {
@@ -77,6 +82,10 @@ impl Buffer {
         self.lines.remove(cursor_line_1);
         self.lines.remove(cursor_line_1); // we remove line index 1 twice, since the original second line is now at index 1
         self.lines.insert(cursor_line_1, merged_line);
+    }
+
+    pub(crate) fn add_line(&mut self, line: &str) {
+        self.lines.push(line.chars().collect());
     }
 }
 

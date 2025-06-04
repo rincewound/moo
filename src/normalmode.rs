@@ -4,7 +4,7 @@ use crossterm::event::{KeyCode, KeyModifiers};
 use ratatui::{
     layout::{Constraint, Flex, Layout, Rect},
     style::Stylize,
-    widgets::{Block, Paragraph, Wrap},
+    widgets::{Block, List, Paragraph, Wrap},
 };
 
 use crate::{
@@ -19,11 +19,14 @@ enum ActivePopup {
     #[default]
     None,
     RenameBuffer,
+    OpenFile,
 }
 
 #[derive(Default)]
 pub struct NormalMode {
     active_popup: ActivePopup,
+    fuzzy_open_search: String,
+    fuzzy_open_suggestion: String,
 }
 
 fn popup_area(area: Rect, percent_x: u16, percent_y: u16) -> Rect {
@@ -59,10 +62,11 @@ impl NormalMode {
             "n: New Buffer",
             "c: Close Buffer",
             "a: Name Buffer",
+            "o: Open File",
             "CTRL-E: Enter edit mode",
             "CTRL-N: Enter Normal mode",
-            "CTRL-A: Enter Select mode",
-            "CTRL-S: Enter Navigate mode",
+            "CTRL-S: Enter Select mode",
+            "CTRL-A: Enter Navigate mode",
         ])
         .block(Block::bordered().title("Keys"));
 
@@ -99,11 +103,71 @@ impl NormalMode {
         frame.render_widget(Paragraph::new(buffer_name.clone()).block(block), area);
     }
 
+    fn render_open_file_popup(
+        &self,
+        frame: &mut ratatui::Frame,
+        dest: Rect,
+        app_state: &app::ApplicationState,
+    ) {
+        let paragraph = Paragraph::new("Open File")
+            .centered()
+            .wrap(Wrap { trim: true });
+        frame.render_widget(paragraph, dest);
+
+        let block = Block::bordered().title("Fuzzy open file..").on_blue();
+        let buffer_name = format!("{}{}", self.fuzzy_open_search, "_");
+        let buffer_suggestion = format!("{}", self.fuzzy_open_suggestion);
+        let area = popup_area(dest, 60, 30);
+        frame.render_widget(block.clone(), area);
+
+        let lst = List::new([
+            buffer_name.fg(ratatui::style::Color::default()),
+            buffer_suggestion.fg(ratatui::style::Color::DarkGray),
+        ])
+        .block(block.clone());
+
+        frame.render_widget(lst, area);
+        // frame.render_widget(Paragraph::new(buffer_suggestion.clone()).block(block), area);
+    }
+
     fn rename_buffer(&mut self, _app_state: &app::ApplicationState) {
         if _app_state.buffers.is_empty() {
             return;
         }
         self.active_popup = ActivePopup::RenameBuffer;
+    }
+
+    fn open_file(&mut self, _app_state: &app::ApplicationState) {
+        self.active_popup = ActivePopup::OpenFile;
+    }
+
+    fn handle_keys_open_file(
+        &mut self,
+        key_event: crossterm::event::KeyEvent,
+        app_state: &mut app::ApplicationState,
+    ) {
+        match key_event.code {
+            KeyCode::Enter => {
+                if self.fuzzy_open_suggestion.is_empty() {
+                    return;
+                }
+
+                let mut buffer = BufferEntry::from_file(self.fuzzy_open_suggestion.clone());
+                buffer.name = self.fuzzy_open_suggestion.clone();
+                app_state.buffers.push(buffer);
+                app_state.current_buffer = app_state.buffers.len() - 1;
+                self.active_popup = ActivePopup::None;
+            }
+            KeyCode::Char(c) => {
+                self.fuzzy_open_search.push(c);
+                self.update_suggsestions(app_state);
+            }
+            KeyCode::Backspace => {
+                self.fuzzy_open_search.pop();
+                self.update_suggsestions(app_state);
+            }
+            _ => (),
+        }
     }
 
     fn handle_keys_rename(
@@ -123,10 +187,12 @@ impl NormalMode {
             KeyCode::Char(c) => {
                 let buffer = &mut app_state.buffers[app_state.current_buffer];
                 buffer.name.push(c);
+                self.update_suggsestions(app_state);
             }
             KeyCode::Backspace => {
                 let buffer = &mut app_state.buffers[app_state.current_buffer];
                 buffer.name.pop();
+                self.update_suggsestions(app_state);
             }
             _ => (),
         }
@@ -143,6 +209,7 @@ impl NormalMode {
                 'c' => close_buffer(app_state),
                 'a' => self.rename_buffer(app_state),
                 'w' => write_buffer(app_state),
+                'o' => self.open_file(app_state),
                 _ => (),
             },
             KeyCode::Left => rotate_buffer(app_state, -1),
@@ -152,6 +219,20 @@ impl NormalMode {
                 // It would be neat to trigger a mode change to Insert mode here.
             }
             _ => {}
+        }
+    }
+
+    fn update_suggsestions(&mut self, app_state: &mut app::ApplicationState) {
+        if self.fuzzy_open_search.is_empty() {
+            return;
+        }
+
+        // Check the CWD for files that start with the typed in buffer name
+        for file in std::fs::read_dir(".").unwrap() {
+            let file_name = file.unwrap().file_name().to_string_lossy().to_string();
+            if file_name.starts_with(self.fuzzy_open_search.as_str()) {
+                self.fuzzy_open_suggestion = file_name;
+            }
         }
     }
 }
@@ -187,10 +268,10 @@ impl EditorMode for NormalMode {
             return;
         }
 
-        if self.active_popup == ActivePopup::RenameBuffer {
-            self.handle_keys_rename(key_event, app_state);
-        } else {
-            self.handle_keys_default(key_event, app_state);
+        match self.active_popup {
+            ActivePopup::None => self.handle_keys_default(key_event, app_state),
+            ActivePopup::RenameBuffer => self.handle_keys_rename(key_event, app_state),
+            ActivePopup::OpenFile => self.handle_keys_open_file(key_event, app_state),
         }
     }
 
@@ -213,6 +294,9 @@ impl EditorMode for NormalMode {
             }
             ActivePopup::RenameBuffer => {
                 self.render_rename_popup(frame, layout[2], app_state);
+            }
+            ActivePopup::OpenFile => {
+                self.render_open_file_popup(frame, layout[2], app_state);
             }
         }
     }

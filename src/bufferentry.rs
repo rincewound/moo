@@ -1,3 +1,5 @@
+use std::io::{BufRead, BufReader, Read};
+
 use crate::buffer::Buffer;
 
 #[derive(Default)]
@@ -14,6 +16,19 @@ pub struct BufferEntry {
 }
 
 impl BufferEntry {
+    fn empty() -> BufferEntry {
+        BufferEntry {
+            name: String::new(),
+            buffer: Buffer::empty_buffer(),
+            cursor_line: 0,
+            cursor_position: 0,
+            modified: false,
+            scroll_offset: 0,
+            selection_start: None,
+            selection_end: None,
+        }
+    }
+
     pub fn skip_word_forward(&mut self) {
         let current_line = self.buffer.line_at(self.cursor_line).unwrap();
 
@@ -180,6 +195,21 @@ impl BufferEntry {
         if self.cursor_position < self.buffer.line_char_length(self.cursor_line).unwrap() {
             self.cursor_position += 1;
         }
+    }
+
+    pub(crate) fn from_file(file_name: String) -> BufferEntry {
+        let mut buffer = BufferEntry::empty();
+        buffer.name = file_name.clone();
+
+        //load data from file:
+        let file = std::fs::File::open(file_name.clone()).unwrap();
+
+        let reader = BufReader::new(file);
+        for line in reader.lines() {
+            buffer.buffer.add_line(line.unwrap().as_str());
+        }
+
+        buffer
     }
 }
 

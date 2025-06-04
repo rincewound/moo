@@ -126,12 +126,15 @@ pub fn render(
 
         let line_as_string = line.iter().map(|c| c.to_string()).collect::<String>();
 
-        frame.render_widget(
-            ratatui::widgets::Paragraph::new(line_as_string)
-                .alignment(ratatui::layout::Alignment::Left),
-            ratatui::layout::Rect::new(0, 3 + id as u16, line_width, 1),
-        );
+        let line_y = 3 + id as u16;
 
+        if line_y < frame.area().height as u16 {
+            frame.render_widget(
+                ratatui::widgets::Paragraph::new(line_as_string)
+                    .alignment(ratatui::layout::Alignment::Left),
+                ratatui::layout::Rect::new(0, line_y, line_width, 1),
+            );
+        }
         // render cursor:
         let effective_line = id + buffer.scroll_offset;
         if buffer.cursor_line == effective_line {
