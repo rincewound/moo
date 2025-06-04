@@ -85,14 +85,6 @@ impl BufferEntry {
         }
     }
 
-    // pub fn char_size_before_cursor(&self) -> Option<usize> {
-    //     if self.cursor_position == 0 {
-    //         return Some(0);
-    //     }
-    //     self.buffer
-    //         .char_size_at(self.cursor_line, self.cursor_position - 1)
-    // }
-
     pub fn add_character(&mut self, c: char) {
         let current_line = self.buffer.line_at_mut(self.cursor_line);
         if let Some(line) = current_line {

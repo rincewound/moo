@@ -37,7 +37,19 @@ impl App {
         app
     }
 
-    pub fn run(&mut self, terminal: &mut DefaultTerminal) -> io::Result<()> {
+    pub fn run(
+        &mut self,
+        terminal: &mut DefaultTerminal,
+        file_name: Option<String>,
+    ) -> io::Result<()> {
+        if let Some(file_name) = file_name {
+            self.app_state
+                .buffers
+                .push(BufferEntry::from_file(file_name));
+            self.app_state.current_buffer = self.app_state.buffers.len() - 1;
+            self.current_mode = Mode::Insert;
+        }
+
         while !self.exit {
             let _ = terminal.clear();
             terminal.draw(|frame| self.draw(frame))?;
