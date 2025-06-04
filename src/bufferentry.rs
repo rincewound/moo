@@ -100,11 +100,17 @@ impl BufferEntry {
                 line.remove(self.cursor_position - 1);
                 self.cursor_position -= 1;
             } else {
+                // If the cursor is at the beginning of a line, remove the line and move the cursor to the previous line
+                // also, copy any characters from the previous line to the current line
                 if self.buffer.num_lines() >= 1 {
-                    self.buffer.remove_line_at(self.cursor_line);
+                    let current_line_len = self.buffer.line_char_length(self.cursor_line).unwrap();
+
+                    self.buffer
+                        .merge_lines(self.cursor_line - 1, self.cursor_line);
+
                     self.cursor_line = self.cursor_line.saturating_sub(1);
                     if let Some(line) = self.buffer.line_at(self.cursor_line) {
-                        self.cursor_position = line.len();
+                        self.cursor_position = line.len() - current_line_len;
                     } else {
                         self.cursor_line = 0;
                     }
@@ -280,5 +286,25 @@ mod tests {
         inject_string(&mut b, "argh foo bar");
         b.move_cursor_up();
         assert_eq!(b.cursor_position, 0);
+    }
+
+    #[test]
+    pub fn can_merge_lines() {
+        let mut b = BufferEntry::default();
+        inject_string(&mut b, "fnord");
+        b.new_line();
+        inject_string(&mut b, "bar");
+        assert!(b.buffer.lines.len() == 2);
+        assert!(b.cursor_line == 1);
+        assert_eq!(b.cursor_position, 3);
+        b.goto_line_start();
+        b.remove_character();
+        assert_eq!(b.buffer.lines.len(), 1);
+        assert_eq!(b.cursor_line, 0);
+        // should be right after the fnord!
+        assert_eq!(b.cursor_position, 5);
+
+        let ln = b.buffer.line_at(0).unwrap();
+        assert_line_equals(ln, "fnordbar");
     }
 }

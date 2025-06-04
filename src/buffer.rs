@@ -39,29 +39,6 @@ impl Buffer {
         self.lines.get(index)
     }
 
-    // pub fn char_at(&self, line: usize, char_index: usize) -> Option<char> {
-    //     if let Some(ln) = self.line_at(line) {
-    //         if let Some(c) = ln.into_iter().skip(char_index).next() {
-    //             return Some(c.clone());
-    //         }
-    //     }
-    //     None
-    // }
-
-    // pub fn char_size_at(&self, line: usize, char_index: usize) -> Option<usize> {
-    //     if let Some(c) = self.char_at(line, char_index) {
-    //         return Some(c.len_utf8());
-    //     }
-    //     None
-    // }
-
-    // pub fn line_byte_length(&self, line: usize) -> Option<usize> {
-    //     if let Some(line) = self.line_at(line) {
-    //         return Some(line.len());
-    //     }
-    //     None
-    // }
-
     pub fn line_at_mut(&mut self, index: usize) -> Option<&mut Line> {
         self.lines.get_mut(index)
     }
@@ -87,11 +64,19 @@ impl Buffer {
         self.lines.insert(line_index + 1, right.to_vec());
     }
 
-    pub(crate) fn line_char_length(&self, cursor_line: usize) -> Option<usize> {
+    pub fn line_char_length(&self, cursor_line: usize) -> Option<usize> {
         if let Some(line) = self.line_at(cursor_line) {
             return Some(line.len());
         }
         None
+    }
+
+    pub fn merge_lines(&mut self, cursor_line_1: usize, cursor_line_2: usize) {
+        let mut merged_line = self.lines[cursor_line_1].clone();
+        merged_line.extend(self.lines[cursor_line_2].clone());
+        self.lines.remove(cursor_line_1);
+        self.lines.remove(cursor_line_1); // we remove line index 1 twice, since the original second line is now at index 1
+        self.lines.insert(cursor_line_1, merged_line);
     }
 }
 
