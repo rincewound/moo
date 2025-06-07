@@ -124,7 +124,7 @@ impl BufferEntry {
                 }
             }
         }
-        self.check_scroll_position(screen_height);
+        self.update_scroll_position(screen_height);
         self.modified = true;
     }
 
@@ -138,7 +138,7 @@ impl BufferEntry {
             .break_line_at(self.cursor_line, self.cursor_position);
         self.cursor_line += 1;
         self.cursor_position = 0;
-        self.check_scroll_position(screen_height);
+        self.update_scroll_position(screen_height);
         self.modified = true;
     }
 
@@ -152,11 +152,7 @@ impl BufferEntry {
     pub fn move_cursor_up(&mut self, screen_height: u16) {
         if self.cursor_line > 0 {
             self.cursor_line -= 1;
-            if self.buffer.line_char_length(self.cursor_line).unwrap() < self.cursor_position {
-                self.goto_line_end();
-            }
-
-            self.check_scroll_position(screen_height);
+            self.update_scroll_position(screen_height);
         }
     }
 
@@ -166,22 +162,36 @@ impl BufferEntry {
     pub fn move_cursor_down(&mut self, screen_height: u16) {
         if self.cursor_line < self.buffer.num_lines() - 1 {
             self.cursor_line += 1;
-            if self.buffer.line_char_length(self.cursor_line).unwrap() < self.cursor_position {
-                self.goto_line_end();
-            }
-
-            self.check_scroll_position(screen_height);
+            self.update_scroll_position(screen_height);
         }
     }
 
-    fn check_scroll_position(&mut self, screen_height: u16) {
+    pub fn move_cursor_page_down(&mut self, screen_height: u16) {
+        self.cursor_line += screen_height as usize;
+        self.update_scroll_position(screen_height);
+    }
+
+    pub fn move_cursor_page_up(&mut self, screen_height: u16) {
+        self.cursor_line = self.cursor_line.saturating_sub(screen_height as usize);
+        self.update_scroll_position(screen_height);
+    }
+
+    fn update_scroll_position(&mut self, screen_height: u16) {
+        if self.cursor_line > self.buffer.num_lines() - 1 {
+            self.cursor_line = self.buffer.num_lines() - 1;
+        }
+
         let on_screen_cursor_y = self.cursor_line as i32 - self.scroll_offset as i32;
         if on_screen_cursor_y > screen_height as i32 {
-            self.scroll_offset += 1;
+            self.scroll_offset = (on_screen_cursor_y - screen_height as i32) as usize;
         }
         let on_screen_cursor_y = self.cursor_line as i32 - self.scroll_offset as i32;
         if on_screen_cursor_y < 0 {
-            self.scroll_offset -= 1;
+            self.scroll_offset = 0;
+        }
+
+        if self.buffer.line_char_length(self.cursor_line).unwrap() < self.cursor_position {
+            self.goto_line_end();
         }
     }
 

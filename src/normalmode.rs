@@ -63,10 +63,9 @@ impl NormalMode {
             "c: Close Buffer",
             "a: Name Buffer",
             "o: Open File",
+            "CTRL-Q: Enter Normal mode",
+            "CTRL-W: Enter Select mode",
             "CTRL-E: Enter edit mode",
-            "CTRL-N: Enter Normal mode",
-            "CTRL-S: Enter Select mode",
-            "CTRL-A: Enter Navigate mode",
         ])
         .block(Block::bordered().title("Keys"));
 

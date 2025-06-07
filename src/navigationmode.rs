@@ -39,7 +39,9 @@ impl EditorMode for NavigationMode {
                 'l' => buffer.goto_line_end(),
 
                 'v' => buffer.move_cursor_up(app_state.window_size.1),
-                'n' => buffer.move_cursor_down(app_state.window_size.1),
+                'b' => buffer.move_cursor_down(app_state.window_size.1),
+                'c' => buffer.move_cursor_page_up(app_state.window_size.1),
+                'n' => buffer.move_cursor_page_down(app_state.window_size.1),
                 _ => (),
             },
             _ => (),
