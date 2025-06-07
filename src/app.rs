@@ -16,6 +16,7 @@ pub struct ApplicationState {
     pub buffers: Vec<BufferEntry>,
     pub current_buffer: usize,
     pub window_size: (u16, u16),
+    pub ctrl_active: bool,
 }
 
 #[derive(Default)]
@@ -95,6 +96,9 @@ impl App {
             // it's important to check that the event is a key press event as
             // crossterm also emits key release and repeat events on Windows.
             Event::Key(key_event) if key_event.kind == KeyEventKind::Press => {
+                self.app_state.ctrl_active =
+                    key_event.modifiers.contains(event::KeyModifiers::CONTROL);
+
                 if key_event.modifiers.contains(event::KeyModifiers::CONTROL) {
                     // change modes
                     match key_event.code {
@@ -103,9 +107,12 @@ impl App {
                                 self.current_mode = Mode::Insert
                             }
                         }
-                        KeyCode::Char('a') => self.current_mode = Mode::Navigate,
-                        KeyCode::Char('s') => self.current_mode = Mode::Select,
-                        KeyCode::Char('n') => self.current_mode = Mode::Normal,
+                        //KeyCode::Char('a') => self.current_mode = Mode::Navigate,
+                        KeyCode::Char('w') => self.current_mode = Mode::Select,
+                        KeyCode::Char('q') => self.current_mode = Mode::Normal,
+                        KeyCode::Char(_) => self
+                            .navigation_mode
+                            .handle_key_event(key_event, &mut self.app_state),
                         _ => (),
                     }
                 }

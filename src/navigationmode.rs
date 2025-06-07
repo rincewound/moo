@@ -18,7 +18,6 @@ impl EditorMode for NavigationMode {
         key_event: crossterm::event::KeyEvent,
         app_state: &mut crate::app::ApplicationState,
     ) {
-        let buffer = &mut app_state.buffers[app_state.current_buffer];
         if key_event.modifiers.contains(KeyModifiers::CONTROL) {
             match key_event.code {
                 KeyCode::Left => rotate_buffer(app_state, -1),
@@ -26,17 +25,21 @@ impl EditorMode for NavigationMode {
 
                 _ => (),
             }
-            return;
+            //return;
         }
 
+        let buffer = &mut app_state.buffers[app_state.current_buffer];
         match key_event.code {
             KeyCode::Char(c) => match c {
-                'd' => buffer.skip_word_backward(),
-                'k' => buffer.skip_word_forward(),
-                'u' => buffer.move_cursor_up(app_state.window_size.1),
-                'n' => buffer.move_cursor_down(app_state.window_size.1),
                 's' => buffer.goto_line_start(),
+                'd' => buffer.skip_word_backward(),
+                'f' => buffer.move_cursor_left(),
+                'k' => buffer.skip_word_forward(),
+                'j' => buffer.move_cursor_right(),
                 'l' => buffer.goto_line_end(),
+
+                'v' => buffer.move_cursor_up(app_state.window_size.1),
+                'n' => buffer.move_cursor_down(app_state.window_size.1),
                 _ => (),
             },
             _ => (),

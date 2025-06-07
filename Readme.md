@@ -32,11 +32,37 @@ Mostly just idle curiosity on TUIs
 	* Auswahl aufheben (q)
 	* (Einfügen an aktueller Stelle) (p)
 
+
+Neue Keymap
+
+Nav:
+Buchstabe vor: j
+Wort vor: k
+Zeilenende: l
+
+Zeilenanfang: s
+Wort zurück: d
+Buchstabe zurück: f
+
+Zeile runter: n
+seite runter: m
+dok ende: ,
+
+Zeile hoch: v
+seite hoch: c
+dok anfang: x
+
++ Navigation ohne Moduswechsel, also mit modifier key?
+
+-> CTRL + oben für navigation
+-> CTRL Q/W/E für
+	Normal
+	Select
+	Insert
+	
 ## Planned Features
-* Fuzzy Open File
 * New File with paths
 * LSP Client ... maybe
-
 
 ## ToDo:
 * Improve keymap
