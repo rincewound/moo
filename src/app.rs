@@ -15,6 +15,7 @@ use crate::{
 pub struct ApplicationState {
     pub buffers: Vec<BufferEntry>,
     pub current_buffer: usize,
+    pub window_size: (u16, u16),
 }
 
 #[derive(Default)]
@@ -53,6 +54,9 @@ impl App {
         while !self.exit {
             let _ = terminal.clear();
             terminal.draw(|frame| self.draw(frame))?;
+
+            let s = terminal.size().unwrap();
+            self.app_state.window_size = (s.width, s.height - crate::modeutil::TOP_BAR_HEIGHT);
 
             self.handle_events()?;
         }

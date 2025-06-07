@@ -98,7 +98,7 @@ impl BufferEntry {
     ///
     /// If the cursor is at the beginning of a line, this will remove the line and
     /// move the cursor to the previous line.
-    pub fn remove_character(&mut self) {
+    pub fn remove_character(&mut self, screen_height: u16) {
         // let char_size = self.char_size_before_cursor().unwrap();
         let current_line = self.buffer.line_at_mut(self.cursor_line);
 
@@ -124,6 +124,7 @@ impl BufferEntry {
                 }
             }
         }
+        self.check_scroll_position(screen_height);
         self.modified = true;
     }
 
@@ -132,11 +133,12 @@ impl BufferEntry {
     /// This will insert a new line at the current position and move the cursor to the beginning of the next line.
     /// If the current line is the last line, a new line will be inserted at the end of the buffer.
     /// If there are no lines in the buffer, a new line will be inserted at position 0.
-    pub fn new_line(&mut self) {
+    pub fn new_line(&mut self, screen_height: u16) {
         self.buffer
             .break_line_at(self.cursor_line, self.cursor_position);
         self.cursor_line += 1;
         self.cursor_position = 0;
+        self.check_scroll_position(screen_height);
         self.modified = true;
     }
 
@@ -147,24 +149,39 @@ impl BufferEntry {
     /// This implementation is somewhat stupid and will always move to the end of
     /// the line. Ideally, this would move to the closest grapheme given the
     /// previous cursor position.
-    pub fn move_cursor_up(&mut self) {
+    pub fn move_cursor_up(&mut self, screen_height: u16) {
         if self.cursor_line > 0 {
             self.cursor_line -= 1;
             if self.buffer.line_char_length(self.cursor_line).unwrap() < self.cursor_position {
                 self.goto_line_end();
             }
+
+            self.check_scroll_position(screen_height);
         }
     }
 
     /// Move the cursor down one line.
     ///
     /// If the cursor is already at the last line, this does nothing.
-    pub fn move_cursor_down(&mut self) {
+    pub fn move_cursor_down(&mut self, screen_height: u16) {
         if self.cursor_line < self.buffer.num_lines() - 1 {
             self.cursor_line += 1;
             if self.buffer.line_char_length(self.cursor_line).unwrap() < self.cursor_position {
                 self.goto_line_end();
             }
+
+            self.check_scroll_position(screen_height);
+        }
+    }
+
+    fn check_scroll_position(&mut self, screen_height: u16) {
+        let on_screen_cursor_y = self.cursor_line as i32 - self.scroll_offset as i32;
+        if on_screen_cursor_y > screen_height as i32 {
+            self.scroll_offset += 1;
+        }
+        let on_screen_cursor_y = self.cursor_line as i32 - self.scroll_offset as i32;
+        if on_screen_cursor_y < 0 {
+            self.scroll_offset -= 1;
         }
     }
 
@@ -225,7 +242,7 @@ mod tests {
     pub fn inject_backspace_modifies_buffer() {
         let mut b = BufferEntry::default();
         b.add_character('a');
-        b.remove_character();
+        b.remove_character(0);
 
         let ln = b.buffer.line_at(0).unwrap();
         assert_line_equals(ln, "");
@@ -244,7 +261,7 @@ mod tests {
     pub fn inject_enter_modifies_buffer() {
         let mut b = BufferEntry::default();
         b.add_character('a');
-        b.new_line();
+        b.new_line(0);
 
         let ln = b.buffer.line_at(0).unwrap();
         assert_line_equals(ln, "a");
@@ -257,7 +274,7 @@ mod tests {
     pub fn backspace_on_empty_line_removes_line() {
         let mut b = BufferEntry::default();
         assert_eq!(b.buffer.num_lines(), 1);
-        b.remove_character();
+        b.remove_character(0);
         assert_eq!(b.buffer.num_lines(), 0);
     }
 
@@ -265,9 +282,9 @@ mod tests {
     pub fn backspace_on_empty_buffer_does_not_crash() {
         let mut b = BufferEntry::default();
         assert_eq!(b.buffer.num_lines(), 1);
-        b.remove_character();
-        b.remove_character();
-        b.remove_character();
+        b.remove_character(0);
+        b.remove_character(0);
+        b.remove_character(0);
         assert_eq!(b.buffer.num_lines(), 0);
     }
 
@@ -304,9 +321,9 @@ mod tests {
     #[test]
     pub fn move_cursor_up_into_empty_line() {
         let mut b = BufferEntry::default();
-        b.new_line();
+        b.new_line(0);
         inject_string(&mut b, "argh foo bar");
-        b.move_cursor_up();
+        b.move_cursor_up(32);
         assert_eq!(b.cursor_position, 0);
     }
 
@@ -314,13 +331,13 @@ mod tests {
     pub fn can_merge_lines() {
         let mut b = BufferEntry::default();
         inject_string(&mut b, "fnord");
-        b.new_line();
+        b.new_line(0);
         inject_string(&mut b, "bar");
         assert!(b.buffer.lines.len() == 2);
         assert!(b.cursor_line == 1);
         assert_eq!(b.cursor_position, 3);
         b.goto_line_start();
-        b.remove_character();
+        b.remove_character(0);
         assert_eq!(b.buffer.lines.len(), 1);
         assert_eq!(b.cursor_line, 0);
         // should be right after the fnord!

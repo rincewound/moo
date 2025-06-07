@@ -8,7 +8,7 @@ Mostly just idle curiosity on TUIs
 * Insert Mode - Bearbeiten
     [x] CTRL + <-/-> prev/next buffer
 * Normal
-	* Öffnen (o)
+	[x] Öffnen (o)
 	[x] Speichern (w)
 	[x] Schließen (c)
 	[x] Neuer Buffer (n)
@@ -19,6 +19,7 @@ Mostly just idle curiosity on TUIs
 	[x] Zeilenende (e)
 	[x] Zeilenanfang (b)
 	[x] Hoch/ Runter (u/d)
+	[x] Scrollen
 	* Seite hoch/runter (PgU/PgD)
 	* Suchen (f)
 * Auswählen
@@ -37,4 +38,11 @@ Mostly just idle curiosity on TUIs
 * LSP Client ... maybe
 
 
+## ToDo:
+* Improve keymap
+* better fuzzy open - inlcuding subdirectories
+* Edit on open
+* Cmdline open
+
 ## Bugs
+* Tabs not rendered correctly

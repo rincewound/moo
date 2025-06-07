@@ -35,16 +35,16 @@ impl EditorMode for InsertMode {
                 buffer.add_character(c);
             }
             KeyCode::Backspace => {
-                buffer.remove_character();
+                buffer.remove_character(app_state.window_size.1);
             }
             KeyCode::Enter => {
-                buffer.new_line();
+                buffer.new_line(app_state.window_size.1);
             }
             KeyCode::Up => {
-                buffer.move_cursor_up();
+                buffer.move_cursor_up(app_state.window_size.1);
             }
             KeyCode::Down => {
-                buffer.move_cursor_down();
+                buffer.move_cursor_down(app_state.window_size.1);
             }
             KeyCode::Left => {
                 buffer.move_cursor_left();

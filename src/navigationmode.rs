@@ -33,8 +33,8 @@ impl EditorMode for NavigationMode {
             KeyCode::Char(c) => match c {
                 'd' => buffer.skip_word_backward(),
                 'k' => buffer.skip_word_forward(),
-                'u' => buffer.move_cursor_up(),
-                'n' => buffer.move_cursor_down(),
+                'u' => buffer.move_cursor_up(app_state.window_size.1),
+                'n' => buffer.move_cursor_down(app_state.window_size.1),
                 's' => buffer.goto_line_start(),
                 'l' => buffer.goto_line_end(),
                 _ => (),

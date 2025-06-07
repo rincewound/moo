@@ -7,6 +7,8 @@ use ratatui::{style::Stylize, text::Line};
 
 use crate::app::ApplicationState;
 
+pub const TOP_BAR_HEIGHT: u16 = 4;
+
 pub fn render_mode_header(
     frame: &mut ratatui::Frame,
     dest: ratatui::layout::Rect,
@@ -100,7 +102,6 @@ pub fn render(
     frame: &mut ratatui::Frame,
     app_state: &crate::app::ApplicationState,
 ) {
-    // ToDo: This should be generalized a bit for all modes!
     let layout = Layout::default()
         .direction(ratatui::layout::Direction::Vertical)
         .constraints([Constraint::Length(3), Constraint::Min(1)])
@@ -148,16 +149,15 @@ pub fn render(
             }
 
             let the_cusor = Line::from(vec![cursor]);
-            if buffer.cursor_position < frame.area().width as usize {
+            let cursor_y = (buffer.cursor_line - buffer.scroll_offset + 3) as u16;
+
+            if buffer.cursor_position < frame.area().width as usize
+                && cursor_y < frame.area().height as u16
+            {
                 frame.render_widget(
                     ratatui::widgets::Paragraph::new(the_cusor)
                         .alignment(ratatui::layout::Alignment::Left),
-                    ratatui::layout::Rect::new(
-                        buffer.cursor_position as u16,
-                        (buffer.cursor_line - buffer.scroll_offset + 3) as u16,
-                        1,
-                        1,
-                    ),
+                    ratatui::layout::Rect::new(buffer.cursor_position as u16, cursor_y, 1, 1),
                 );
             }
         }
