@@ -25,7 +25,6 @@ impl EditorMode for NavigationMode {
 
                 _ => (),
             }
-            //return;
         }
 
         let buffer = &mut app_state.buffers[app_state.current_buffer];

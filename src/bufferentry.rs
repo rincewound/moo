@@ -29,8 +29,22 @@ impl BufferEntry {
         }
     }
 
+    pub fn clear_selection(&mut self) {
+        self.selection_start = None;
+        self.selection_end = None;
+    }
+
     pub fn skip_word_forward(&mut self) {
         let current_line = self.buffer.line_at(self.cursor_line).unwrap();
+
+        // if the cursor is already at the end of the line, do nothing
+        if self.cursor_position >= current_line.len() {
+            if self.cursor_line <= self.buffer.num_lines() - 1 {
+                self.cursor_line += 1;
+                self.cursor_position = 0;
+                return;
+            }
+        }
 
         // start position is the next non whitespace character:
         let mut pos = self.cursor_position;
@@ -54,6 +68,15 @@ impl BufferEntry {
 
     pub fn skip_word_backward(&mut self) {
         let current_line = self.buffer.line_at(self.cursor_line).unwrap();
+
+        // if the cursor is already at the start of the line, do nothing
+        if self.cursor_position == 0 {
+            if self.cursor_line > 0 {
+                self.cursor_line -= 1;
+                self.cursor_position = self.buffer.line_char_length(self.cursor_line).unwrap();
+                return;
+            }
+        }
 
         // start position is the next non whitespace character:
         let mut pos = self.cursor_position;
@@ -109,7 +132,7 @@ impl BufferEntry {
             } else {
                 // If the cursor is at the beginning of a line, remove the line and move the cursor to the previous line
                 // also, copy any characters from the previous line to the current line
-                if self.buffer.num_lines() >= 1 {
+                if self.buffer.num_lines() > 1 {
                     let current_line_len = self.buffer.line_char_length(self.cursor_line).unwrap();
 
                     self.buffer
@@ -121,6 +144,12 @@ impl BufferEntry {
                     } else {
                         self.cursor_line = 0;
                     }
+                }
+                // special case: this is the last line in the buffer, just remove it:
+                else {
+                    self.buffer.remove_line_at(self.cursor_line);
+                    self.cursor_line = 0;
+                    self.cursor_position = 0;
                 }
             }
         }
@@ -177,7 +206,7 @@ impl BufferEntry {
     }
 
     fn update_scroll_position(&mut self, screen_height: u16) {
-        if self.cursor_line > self.buffer.num_lines() - 1 {
+        if self.cursor_line > self.buffer.num_lines().saturating_sub(1) {
             self.cursor_line = self.buffer.num_lines() - 1;
         }
 
@@ -190,8 +219,10 @@ impl BufferEntry {
             self.scroll_offset = 0;
         }
 
-        if self.buffer.line_char_length(self.cursor_line).unwrap() < self.cursor_position {
-            self.goto_line_end();
+        if let Some(pos) = self.buffer.line_char_length(self.cursor_line) {
+            if self.cursor_position > pos {
+                self.goto_line_end();
+            }
         }
     }
 
@@ -204,6 +235,10 @@ impl BufferEntry {
         if self.cursor_position > 0 {
             self.cursor_position -= 1;
         }
+        if self.cursor_position == 0 && self.cursor_line > 0 {
+            self.cursor_line -= 1;
+            self.cursor_position = self.buffer.line_char_length(self.cursor_line).unwrap();
+        }
     }
 
     /// Move the cursor one position to the right.
@@ -213,6 +248,11 @@ impl BufferEntry {
     pub fn move_cursor_right(&mut self) {
         if self.cursor_position < self.buffer.line_char_length(self.cursor_line).unwrap() {
             self.cursor_position += 1;
+        } else {
+            if self.cursor_line < self.buffer.num_lines() - 1 {
+                self.cursor_position = 0;
+                self.cursor_line += 1;
+            }
         }
     }
 
@@ -230,6 +270,13 @@ impl BufferEntry {
 
         buffer
     }
+
+    pub fn extend_selection_to_cursor(&mut self) {
+        if self.selection_start.is_none() {
+            self.selection_start = Some((self.cursor_line, self.cursor_position));
+        }
+        self.selection_end = Some((self.cursor_line, self.cursor_position));
+    }
 }
 
 #[cfg(test)]
@@ -246,6 +293,7 @@ mod tests {
         for c in s.chars() {
             b.add_character(c);
         }
+        b.new_line(40);
     }
 
     #[test]
@@ -302,6 +350,7 @@ mod tests {
     pub fn can_skip_word_forward() {
         let mut b = BufferEntry::default();
         inject_string(&mut b, "argh foo bar");
+        b.cursor_line = 0;
         b.goto_line_start();
         b.skip_word_forward();
         assert_eq!(b.cursor_position, 4);
@@ -309,14 +358,26 @@ mod tests {
         assert_eq!(b.cursor_position, 8);
         b.skip_word_forward();
         assert_eq!(b.cursor_position, 12);
+    }
+
+    #[test]
+    pub fn skip_forward_at_line_end_skips_to_next_line_start() {
+        let mut b = BufferEntry::default();
+        inject_string(&mut b, "argh foo bar");
+        inject_string(&mut b, "again");
+        b.cursor_line = 0;
+        b.cursor_position = 0;
+        b.goto_line_end();
         b.skip_word_forward();
-        assert_eq!(b.cursor_position, 12);
+        assert_eq!(b.cursor_position, 0);
+        assert_eq!(b.cursor_line, 1);
     }
 
     #[test]
     pub fn can_skip_word_backward() {
         let mut b = BufferEntry::default();
         inject_string(&mut b, "argh foo bar");
+        b.cursor_line = 0;
         b.goto_line_end();
         b.skip_word_backward();
         assert_eq!(b.cursor_position, 9);
@@ -329,6 +390,19 @@ mod tests {
     }
 
     #[test]
+    pub fn skip_backward_at_line_start_skips_to_prev_line_end() {
+        let mut b = BufferEntry::default();
+        inject_string(&mut b, "argh foo bar");
+        inject_string(&mut b, "again");
+        b.cursor_line = 1;
+        b.cursor_position = 0;
+        b.goto_line_start();
+        b.skip_word_backward();
+        assert_eq!(b.cursor_position, 12);
+        assert_eq!(b.cursor_line, 0);
+    }
+
+    #[test]
     pub fn move_cursor_up_into_empty_line() {
         let mut b = BufferEntry::default();
         b.new_line(0);
@@ -338,22 +412,103 @@ mod tests {
     }
 
     #[test]
+    pub fn move_cursor_right_skips_to_new_line() {
+        let mut b = BufferEntry::default();
+        inject_string(&mut b, "argh foo bar");
+        b.new_line(0);
+        b.cursor_line = 0;
+        b.goto_line_end();
+        b.move_cursor_right();
+        assert_eq!(b.cursor_position, 0);
+        assert_eq!(b.cursor_line, 1);
+    }
+
+    #[test]
+    pub fn move_cursor_left_skips_to_prev_line() {
+        let mut b = BufferEntry::default();
+        inject_string(&mut b, "argh foo bar");
+        b.new_line(0);
+        b.cursor_line = 1;
+        b.goto_line_start();
+        b.move_cursor_left();
+        assert_eq!(b.cursor_position, 12);
+        assert_eq!(b.cursor_line, 0);
+    }
+
+    #[test]
     pub fn can_merge_lines() {
         let mut b = BufferEntry::default();
         inject_string(&mut b, "fnord");
-        b.new_line(0);
         inject_string(&mut b, "bar");
-        assert!(b.buffer.lines.len() == 2);
-        assert!(b.cursor_line == 1);
-        assert_eq!(b.cursor_position, 3);
+        assert_eq!(b.buffer.lines.len(), 3);
+        assert_eq!(b.cursor_line, 2);
+        b.cursor_line = 1;
         b.goto_line_start();
         b.remove_character(0);
-        assert_eq!(b.buffer.lines.len(), 1);
+        assert_eq!(b.buffer.lines.len(), 2);
         assert_eq!(b.cursor_line, 0);
         // should be right after the fnord!
         assert_eq!(b.cursor_position, 5);
 
         let ln = b.buffer.line_at(0).unwrap();
         assert_line_equals(ln, "fnordbar");
+    }
+
+    #[test]
+    pub fn clear_selection_clears_selection() {
+        let mut b = BufferEntry::default();
+        inject_string(&mut b, "fnord");
+        b.selection_start = Some((0, 0));
+        b.selection_end = Some((0, 5));
+        b.clear_selection();
+        assert_eq!(b.selection_start, None);
+        assert_eq!(b.selection_end, None);
+    }
+
+    #[test]
+    pub fn add_character_to_selection() {
+        let mut b = BufferEntry::default();
+        inject_string(&mut b, "fnorda");
+        b.cursor_line = 0;
+        b.goto_line_end();
+        b.selection_start = Some((0, 0));
+        b.selection_end = Some((0, 5));
+        b.extend_selection_to_cursor();
+        assert_eq!(b.selection_start, Some((0, 0)));
+        assert_eq!(b.selection_end, Some((0, 6)));
+    }
+
+    #[test]
+    pub fn move_word_extend_selection_works_correctly() {
+        let mut b = BufferEntry::default();
+        inject_string(&mut b, "Foo To The Bar");
+        b.cursor_line = 0;
+        b.goto_line_start();
+        b.selection_start = Some((0, 0));
+        b.skip_word_forward();
+        b.extend_selection_to_cursor();
+        assert_eq!(b.selection_start, Some((0, 0)));
+        assert_eq!(b.selection_end, Some((0, 3)));
+        b.skip_word_forward();
+        b.extend_selection_to_cursor();
+        assert_eq!(b.selection_start, Some((0, 0)));
+        assert_eq!(b.selection_end, Some((0, 6)));
+    }
+
+    #[test]
+    pub fn move_word_extend_selection_backwards_shrinks_selection() {
+        let mut b = BufferEntry::default();
+        inject_string(&mut b, "Foo To The Bar");
+        b.cursor_line = 0;
+        b.goto_line_start();
+        b.selection_start = Some((0, 0));
+        b.skip_word_forward();
+        b.extend_selection_to_cursor();
+        assert_eq!(b.selection_start, Some((0, 0)));
+        assert_eq!(b.selection_end, Some((0, 3)));
+        b.skip_word_backward();
+        b.extend_selection_to_cursor();
+        assert_eq!(b.selection_start, Some((0, 0)));
+        assert_eq!(b.selection_end, Some((0, 0)));
     }
 }

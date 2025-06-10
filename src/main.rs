@@ -10,6 +10,7 @@ mod mode;
 mod modeutil;
 mod navigationmode;
 mod normalmode;
+mod selectmode;
 
 fn main() -> io::Result<()> {
     let args: Vec<String> = env::args().collect();
